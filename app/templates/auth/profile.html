@@ -19,7 +19,7 @@
                     <input type="text" id="name" name="name" value="{{ current_user.name }}" required>
                 </div>
                 <div class="form-group">
-                    <label>Email</label>
+                    <label>SRM IST Email</label>
                     <input type="email" value="{{ current_user.email }}" disabled class="input-disabled">
                     <span class="form-hint">Email cannot be changed</span>
                 </div>
@@ -28,7 +28,7 @@
                         <input type="checkbox" id="has_car" name="has_car" onchange="toggleCarFields(this.checked)" {%
                             if current_user.has_car %}checked{% endif %}>
                         <span class="toggle-slider"></span>
-                        <span class="toggle-text">🚗 I have a car</span>
+                        <span class="toggle-text">I have a car and want to host rides</span>
                     </label>
                 </div>
                 <div id="car-fields" class="car-fields"
@@ -42,7 +42,7 @@
                         <div class="form-group">
                             <label for="car_number">Car Number</label>
                             <input type="text" id="car_number" name="car_number"
-                                value="{{ current_user.car_number or '' }}" placeholder="e.g. KA01AB1234">
+                                value="{{ current_user.car_number or '' }}" placeholder="e.g. TN01AB1234">
                         </div>
                     </div>
                 </div>
