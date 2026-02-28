@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Find a Ride — BroLift{% endblock %}
+{% block extra_head %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initFindMap" async
+    defer></script>
+{% endblock %}
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1>🔍 Find a Ride</h1>
+        <p>Search for available rides heading to college from your area</p>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-card">
+        <form method="POST" class="search-form">
+            <div class="search-field">
+                <label for="pickup_location">📍 Your Pickup Location</label>
+                <input type="text" id="pickup_location" name="pickup_location"
+                    placeholder="Where should they pick you up?" value="{{ search_data.get('pickup_location', '') }}"
+                    autocomplete="off">
+            </div>
+            <div class="search-field">
+                <label for="preferred_time">🕐 Preferred Departure Time</label>
+                <input type="datetime-local" id="preferred_time" name="preferred_time"
+                    value="{{ search_data.get('preferred_time', '') }}">
+            </div>
+            <button type="submit" class="btn-search">Search Rides</button>
+        </form>
+    </div>
+
+    <div class="find-layout">
+        <!-- Results -->
+        <div class="find-results-col">
+            {% if rides %}
+            <h3 class="results-count">{{ rides|length }} ride{{ 's' if rides|length != 1 }} found</h3>
+            <div class="rides-list">
+                {% for ride in rides %}
+                <div class="ride-card-full"
+                    onclick="selectRide({{ ride.id }}, {{ ride.start_lat or 0 }}, {{ ride.start_lng or 0 }})">
+                    <div class="ride-host-info">
+                        <div class="host-avatar">{{ ride.host.name[0].upper() }}</div>
+                        <div>
+                            <div class="host-name">{{ ride.host.name }}</div>
+                            <div class="host-car">🚗 {{ ride.host.car_model or 'Car' }} · {{ ride.host.car_number or ''
+                                }}</div>
+                        </div>
+                        <span class="ride-badge status-{{ ride.status }}">{{ ride.status }}</span>
+                    </div>
+                    <div class="ride-route-info">
+                        <div class="route-from">📍 {{ ride.start_location }}</div>
+                        <div class="route-arrow-full">———————→</div>
+                        <div class="route-to">🏫 {{ ride.destination }}</div>
+                    </div>
+                    <div class="ride-details-row">
+                        <div class="detail-chip">🕐 {{ ride.departure_time.strftime('%d %b, %I:%M %p') }}</div>
+                        <div class="detail-chip">💺 {{ ride.seats_available }} seat{{ 's' if ride.seats_available != 1
+                            }} left</div>
+                        <div class="detail-chip">💰 ₹{{ ride.cost_per_person }}/person</div>
+                    </div>
+                    {% if ride.notes %}
+                    <div class="ride-notes">📝 {{ ride.notes }}</div>
+                    {% endif %}
+                    <a href="{{ url_for('rides.ride_detail', ride_id=ride.id) }}" class="btn-view-ride"
+                        onclick="event.stopPropagation()">View & Request →</a>
+                </div>
+                {% endfor %}
+            </div>
+            {% elif search_data %}
+            <div class="no-results">
+                <div class="no-results-icon">😕</div>
+                <h3>No rides found</h3>
+                <p>No rides match your search. Try a different time window or check back later.</p>
+            </div>
+            {% else %}
+            <div class="no-results">
+                <div class="no-results-icon">🔍</div>
+                <h3>Search for rides above</h3>
+                <p>Enter your pickup location and preferred time to find available rides.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Map -->
+        <div class="find-map-col">
+            <div class="map-card sticky-map">
+                <div class="map-label">🗺️ Rides Map</div>
+                <div id="find-map" class="google-map"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+    let map;
+    const collegeLat = {{ college_lat }};
+    const collegeLng = {{ college_lng }};
+    const rideMarkers = [];
+
+    const rides = [
+        {% for ride in rides %}
+    {
+        id: { { ride.id } }, lat: { { ride.start_lat or 0 } }, lng: { { ride.start_lng or 0 } },
+        label: "{{ ride.host.name }} — {{ ride.departure_time.strftime('%I:%M %p') }}"
+    },
+    {% endfor %}
+];
+
+    function initFindMap() {
+        map = new google.maps.Map(document.getElementById('find-map'), {
+            center: { lat: collegeLat, lng: collegeLng },
+            zoom: 12,
+            styles: darkMapStyle
+        });
+
+        // College marker
+        new google.maps.Marker({
+            position: { lat: collegeLat, lng: collegeLng },
+            map, title: 'College Campus',
+            icon: { url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }
+        });
+
+        // Ride markers
+        rides.forEach(ride => {
+            if (ride.lat && ride.lng) {
+                const marker = new google.maps.Marker({
+                    position: { lat: ride.lat, lng: ride.lng },
+                    map, title: ride.label,
+                    icon: { url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' }
+                });
+                const infoWindow = new google.maps.InfoWindow({ content: `<div style="color:#000;font-weight:600">${ride.label}</div>` });
+                marker.addListener('click', () => infoWindow.open(map, marker));
+                rideMarkers.push({ id: ride.id, marker });
+            }
+        });
+
+        // Autocomplete for pickup
+        const ac = new google.maps.places.Autocomplete(
+            document.getElementById('pickup_location'), { componentRestrictions: { country: 'in' } }
+        );
+    }
+
+    function selectRide(rideId, lat, lng) {
+        if (lat && lng && map) {
+            map.setCenter({ lat, lng });
+            map.setZoom(14);
+        }
+    }
+
+    const darkMapStyle = [
+        { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
+        { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1a2e' }] },
+        { elementType: 'labels.text.fill', stylers: [{ color: '#9ca3af' }] },
+        { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2d3561' }] },
+        { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f3460' }] },
+        { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#162032' }] },
+    ];
+</script>
+{% endblock %}
