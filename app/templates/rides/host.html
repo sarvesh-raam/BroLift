@@ -26,12 +26,13 @@
                             required autocomplete="off">
                         <input type="hidden" id="start_lat" name="start_lat">
                         <input type="hidden" id="start_lng" name="start_lng">
-                        <span class="form-hint">Start typing — Google Maps will suggest addresses</span>
+                        <input type="hidden" id="distance_km" name="distance_km" value="0">
+                        <span class="form-hint" id="dist-hint">Start typing to see route on map</span>
                     </div>
                     <div class="form-group">
                         <label>Destination</label>
-                        <input type="text" id="destination" name="destination" value="SRM IST Campus" readonly
-                            class="input-readonly">
+                        <input type="text" value="{{ college_name }}" readonly class="input-readonly">
+                        <input type="hidden" id="destination" name="destination" value="{{ college_name }}">
                         <input type="hidden" id="dest_lat" name="dest_lat" value="{{ college_lat }}">
                         <input type="hidden" id="dest_lng" name="dest_lng" value="{{ college_lng }}">
                     </div>
@@ -42,29 +43,54 @@
                                 value="{{ form_data.get('departure_time', '') }}" required>
                         </div>
                         <div class="form-group">
-                            <label for="available_seats">Available Seats</label>
+                            <label for="available_seats">Seats to Offer</label>
                             <select id="available_seats" name="available_seats" required>
-                                {% for i in range(1, 5) %}
+                                {% set vtype = current_user.vehicle_type or 'car' %}
+                                {% set vcap = current_user.vehicle_capacity or 5 %}
+                                {% if vtype == 'bike' %}
+                                <option value="1">1 seat (pillion)</option>
+                                {% else %}
+                                {% set max_seats = vcap - 1 %}
+                                {% for i in range(1, max_seats + 1) %}
                                 <option value="{{ i }}" {% if form_data.get('available_seats')==i|string %}selected{%
                                     endif %}>
                                     {{ i }} seat{{ 's' if i > 1 }}
                                 </option>
                                 {% endfor %}
+                                {% endif %}
                             </select>
+                            <span class="form-hint">
+                                {% if vtype == 'bike' %}Bike — 1 pillion seat
+                                {% else %}{{ vcap }}-seater car — max {{ vcap - 1 }} seats{% endif %}
+                            </span>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="fuel_cost">Estimated Total Fuel Cost (Rs.)</label>
-                        <input type="number" id="fuel_cost" name="fuel_cost" min="0" step="0.01" placeholder="e.g. 150"
-                            value="{{ form_data.get('fuel_cost', '') }}">
-                        <span class="form-hint" id="cost-per-person">Enter seats and cost to see per-person share</span>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fuel_cost">Estimated Fuel Cost (Rs.)</label>
+                            <input type="number" id="fuel_cost" name="fuel_cost" min="0" step="0.01"
+                                placeholder="Auto-calculated or enter manually"
+                                value="{{ form_data.get('fuel_cost', '') }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Your Vehicle Mileage</label>
+                            <div class="mileage-display">{{ current_user.vehicle_mileage or 15 }} km/litre</div>
+                            <span class="form-hint"><a href="{{ url_for('auth.profile') }}"
+                                    style="color:var(--accent-light)">Update in profile</a></span>
+                        </div>
+                    </div>
+                    <div class="cost-summary-box" id="cost-summary" style="display:none">
+                        <div class="cost-row"><span>Distance</span><strong id="disp-distance">—</strong></div>
+                        <div class="cost-row"><span>Fuel Cost</span><strong id="disp-fuel">—</strong></div>
+                        <div class="cost-row highlight"><span>Per Person Share</span><strong
+                                id="disp-per-person">—</strong></div>
                     </div>
                     <div class="form-group">
                         <label for="notes">Notes (Optional)</label>
-                        <textarea id="notes" name="notes" rows="3"
-                            placeholder="e.g. Will pick up from main road only...">{{ form_data.get('notes', '') }}</textarea>
+                        <textarea id="notes" name="notes" rows="2"
+                            placeholder="e.g. Pickup from main road only, ladies preferred...">{{ form_data.get('notes', '') }}</textarea>
                     </div>
-                    <button type="submit" class="btn-form-submit">Post Ride</button>
+                    <button type="submit" class="btn-form-submit">Post Ride — Go Live</button>
                 </form>
             </div>
         </div>
@@ -86,6 +112,8 @@
     var map, directionsService, directionsRenderer, autocomplete;
     var COLLEGE_LAT = {{ college_lat }};
     var COLLEGE_LNG = {{ college_lng }};
+    var MILEAGE = {{ current_user.vehicle_mileage or 15 }};
+    var FUEL_PRICE = 103; // Rs per litre (current petrol price ~103)
 
     var darkMapStyle = [
         { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
@@ -108,8 +136,7 @@
 
         new google.maps.Marker({
             position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-            map: map,
-            title: 'SRM IST Campus',
+            map: map, title: 'SRM IST Campus',
             icon: { url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }
         });
 
@@ -122,35 +149,52 @@
             if (place.geometry) {
                 document.getElementById('start_lat').value = place.geometry.location.lat();
                 document.getElementById('start_lng').value = place.geometry.location.lng();
-                drawRoute(place.geometry.location, { lat: COLLEGE_LAT, lng: COLLEGE_LNG });
+                drawRoute(place.geometry.location);
             }
         });
     }
 
-    function drawRoute(origin, destination) {
+    function drawRoute(origin) {
         directionsService.route({
             origin: origin,
-            destination: destination,
+            destination: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
             travelMode: google.maps.TravelMode.DRIVING
         }, function (result, status) {
-            if (status === 'OK') directionsRenderer.setDirections(result);
+            if (status === 'OK') {
+                directionsRenderer.setDirections(result);
+                // Extract distance
+                var distMeters = result.routes[0].legs[0].distance.value;
+                var distKm = (distMeters / 1000).toFixed(1);
+                document.getElementById('distance_km').value = distKm;
+                document.getElementById('dist-hint').textContent = 'Route distance: ' + distKm + ' km to SRM IST';
+                document.getElementById('dist-hint').style.color = '#4ade80';
+                // Auto-calculate fuel cost
+                var fuelLitres = distKm / MILEAGE;
+                var fuelCost = Math.ceil(fuelLitres * FUEL_PRICE);
+                document.getElementById('fuel_cost').value = fuelCost;
+                updateCostSummary(distKm, fuelCost);
+            }
         });
     }
 
-    function updateCostHint() {
+    function updateCostSummary(distKm, fuelCost) {
         var seats = parseInt(document.getElementById('available_seats').value) || 1;
-        var cost = parseFloat(document.getElementById('fuel_cost').value) || 0;
-        var hint = document.getElementById('cost-per-person');
-        if (cost > 0) {
-            var perPerson = (cost / (seats + 1)).toFixed(2);
-            hint.textContent = 'Rs.' + perPerson + ' per person (including you as host)';
-            hint.style.color = '#4ade80';
-        } else {
-            hint.textContent = 'Enter seats and cost to see per-person share';
-            hint.style.color = '';
-        }
+        var cost = parseFloat(fuelCost) || 0;
+        var perPerson = cost > 0 ? 'Rs.' + (cost / (seats + 1)).toFixed(0) : '—';
+        document.getElementById('disp-distance').textContent = distKm + ' km';
+        document.getElementById('disp-fuel').textContent = cost > 0 ? 'Rs.' + cost : '—';
+        document.getElementById('disp-per-person').textContent = perPerson;
+        document.getElementById('cost-summary').style.display = 'block';
     }
-    document.getElementById('available_seats').addEventListener('change', updateCostHint);
-    document.getElementById('fuel_cost').addEventListener('input', updateCostHint);
+
+    document.getElementById('available_seats').addEventListener('change', function () {
+        var dist = document.getElementById('distance_km').value;
+        var fuel = document.getElementById('fuel_cost').value;
+        if (dist && fuel) updateCostSummary(dist, fuel);
+    });
+    document.getElementById('fuel_cost').addEventListener('input', function () {
+        var dist = document.getElementById('distance_km').value;
+        if (dist) updateCostSummary(dist, this.value);
+    });
 </script>
 {% endblock %}
