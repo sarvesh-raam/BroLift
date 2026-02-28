@@ -20,7 +20,7 @@
                     autocomplete="off">
             </div>
             <div class="search-field">
-                <label for="search_date">Date <span style="color:var(--accent-light)">*</span></label>
+                <label for="search_date">Date *</label>
                 <input type="date" id="search_date" name="search_date" value="{{ search_data.get('search_date', '') }}"
                     required>
             </div>
@@ -39,8 +39,7 @@
             <h3 class="results-count">{{ rides|length }} ride{{ 's' if rides|length != 1 }} found</h3>
             <div class="rides-list">
                 {% for ride in rides %}
-                <div class="ride-card-full"
-                    onclick="selectRide({{ ride.id }}, {{ ride.start_lat or 0 }}, {{ ride.start_lng or 0 }})">
+                <div class="ride-card-full">
                     <div class="ride-host-info">
                         <div class="host-avatar">{{ ride.host.name[0].upper() }}</div>
                         <div>
@@ -52,7 +51,7 @@
                     </div>
                     <div class="ride-route-info">
                         <div class="route-from">From: {{ ride.start_location }}</div>
-                        <div class="route-arrow-full">——————</div>
+                        <div class="route-arrow-full">——</div>
                         <div class="route-to">To: {{ ride.destination }}</div>
                     </div>
                     <div class="ride-details-row">
@@ -64,8 +63,8 @@
                     {% if ride.notes %}
                     <div class="ride-notes">Note: {{ ride.notes }}</div>
                     {% endif %}
-                    <a href="{{ url_for('rides.ride_detail', ride_id=ride.id) }}" class="btn-view-ride"
-                        onclick="event.stopPropagation()">View and Request</a>
+                    <a href="{{ url_for('rides.ride_detail', ride_id=ride.id) }}" class="btn-view-ride">View and
+                        Request</a>
                 </div>
                 {% endfor %}
             </div>
@@ -93,18 +92,9 @@
 {% endblock %}
 {% block extra_scripts %}
 <script>
-    var map;
     var COLLEGE_LAT = {{ college_lat }};
     var COLLEGE_LNG = {{ college_lng }};
-
-    var rides = [
-        {% for ride in rides %}
-    {
-        id: { { ride.id } }, lat: { { ride.start_lat or 0 } }, lng: { { ride.start_lng or 0 } },
-        label: { { ride.host.name | tojson } } + " — " + {{ ride.departure_time.strftime('%I:%M %p') | tojson }
-    } },
-    {% endfor %}
-];
+    var RIDES = {{ rides_json | safe }};
 
     var darkMapStyle = [
         { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
@@ -116,7 +106,7 @@
     ];
 
     function initFindMap() {
-        map = new google.maps.Map(document.getElementById('find-map'), {
+        var map = new google.maps.Map(document.getElementById('find-map'), {
             center: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
             zoom: 12,
             styles: darkMapStyle
@@ -129,7 +119,7 @@
             icon: { url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }
         });
 
-        rides.forEach(function (ride) {
+        RIDES.forEach(function (ride) {
             if (ride.lat && ride.lng) {
                 var marker = new google.maps.Marker({
                     position: { lat: ride.lat, lng: ride.lng },
@@ -137,21 +127,16 @@
                     title: ride.label,
                     icon: { url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' }
                 });
-                var info = new google.maps.InfoWindow({ content: '<div style="color:#000;font-weight:600">' + ride.label + '</div>' });
+                var info = new google.maps.InfoWindow({
+                    content: '<div style="color:#000;font-weight:600;padding:4px">' + ride.label + '</div>'
+                });
                 marker.addListener('click', function () { info.open(map, marker); });
             }
         });
 
         var pickup = document.getElementById('pickup_location');
-        if (pickup) {
+        if (pickup && typeof google !== 'undefined') {
             new google.maps.places.Autocomplete(pickup, { componentRestrictions: { country: 'in' } });
-        }
-    }
-
-    function selectRide(rideId, lat, lng) {
-        if (lat && lng && map) {
-            map.setCenter({ lat: lat, lng: lng });
-            map.setZoom(14);
         }
     }
 </script>
