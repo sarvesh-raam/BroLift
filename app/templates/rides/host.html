@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Host a Ride — BroLift{% endblock %}
+{% block extra_head %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initHostMap" async
+    defer></script>
+{% endblock %}
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1>🚗 Host a Ride</h1>
+        <p>Share your commute and split fuel costs with fellow students</p>
+    </div>
+    <div class="host-layout">
+        <!-- Form -->
+        <div class="host-form-col">
+            <div class="form-card">
+                {% if errors %}
+                <div class="error-list">
+                    {% for error in errors %}<div class="error-item">⚠️ {{ error }}</div>{% endfor %}
+                </div>
+                {% endif %}
+                <form method="POST" id="host-form">
+                    <div class="form-group">
+                        <label for="start_location">📍 Start Location</label>
+                        <input type="text" id="start_location" name="start_location"
+                            placeholder="Type your starting area..." value="{{ form_data.get('start_location', '') }}"
+                            required autocomplete="off">
+                        <input type="hidden" id="start_lat" name="start_lat">
+                        <input type="hidden" id="start_lng" name="start_lng">
+                        <span class="form-hint">Start typing to search — Google Maps will suggest addresses</span>
+                    </div>
+                    <div class="form-group">
+                        <label>🏫 Destination</label>
+                        <input type="text" id="destination" name="destination" value="College Campus" readonly
+                            class="input-readonly">
+                        <input type="hidden" id="dest_lat" name="dest_lat" value="{{ college_lat }}">
+                        <input type="hidden" id="dest_lng" name="dest_lng" value="{{ college_lng }}">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="departure_time">🕐 Departure Time</label>
+                            <input type="datetime-local" id="departure_time" name="departure_time"
+                                value="{{ form_data.get('departure_time', '') }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="available_seats">💺 Available Seats</label>
+                            <select id="available_seats" name="available_seats" required>
+                                {% for i in range(1, 5) %}
+                                <option value="{{ i }}" {% if form_data.get('available_seats')==i|string %}selected{%
+                                    endif %}>{{ i }} seat{{ 's' if i > 1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="fuel_cost">⛽ Estimated Total Fuel Cost (₹)</label>
+                        <input type="number" id="fuel_cost" name="fuel_cost" min="0" step="0.01" placeholder="e.g. 150"
+                            value="{{ form_data.get('fuel_cost', '') }}">
+                        <span class="form-hint" id="cost-per-person">Enter seats and cost to see per-person share</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes">📝 Notes (Optional)</label>
+                        <textarea id="notes" name="notes" rows="3"
+                            placeholder="e.g. Will pick up from main gate only, ladies preferred...">{{ form_data.get('notes', '') }}</textarea>
+                    </div>
+                    <button type="submit" class="btn-form-submit">🚀 Post Ride</button>
+                </form>
+            </div>
+        </div>
+        <!-- Map -->
+        <div class="host-map-col">
+            <div class="map-card">
+                <div class="map-label">📍 Route Preview</div>
+                <div id="host-map" class="google-map"></div>
+                <div class="map-legend">
+                    <span class="legend-item"><span class="dot green"></span> Start</span>
+                    <span class="legend-item"><span class="dot blue"></span> College</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+    let map, directionsService, directionsRenderer, autocomplete;
+    const collegeLat = {{ college_lat }};
+    const collegeLng = {{ college_lng }};
+
+    function initHostMap() {
+        directionsService = new google.maps.DirectionsService();
+        directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: false });
+        map = new google.maps.Map(document.getElementById('host-map'), {
+            center: { lat: collegeLat, lng: collegeLng },
+            zoom: 12,
+            styles: darkMapStyle
+        });
+        directionsRenderer.setMap(map);
+
+        // College marker
+        new google.maps.Marker({
+            position: { lat: collegeLat, lng: collegeLng },
+            map, title: 'College Campus',
+            icon: { url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }
+        });
+
+        // Autocomplete for start location
+        autocomplete = new google.maps.places.Autocomplete(
+            document.getElementById('start_location'), { componentRestrictions: { country: 'in' } }
+        );
+        autocomplete.addListener('place_changed', function () {
+            const place = autocomplete.getPlace();
+            if (place.geometry) {
+                document.getElementById('start_lat').value = place.geometry.location.lat();
+                document.getElementById('start_lng').value = place.geometry.location.lng();
+                drawRoute(place.geometry.location, { lat: collegeLat, lng: collegeLng });
+            }
+        });
+    }
+
+    function drawRoute(origin, destination) {
+        directionsService.route({
+            origin, destination,
+            travelMode: google.maps.TravelMode.DRIVING
+        }, function (result, status) {
+            if (status === 'OK') directionsRenderer.setDirections(result);
+        });
+    }
+
+    // Cost per person calculator
+    function updateCostHint() {
+        const seats = parseInt(document.getElementById('available_seats').value) || 1;
+        const cost = parseFloat(document.getElementById('fuel_cost').value) || 0;
+        const hint = document.getElementById('cost-per-person');
+        if (cost > 0) {
+            const perPerson = (cost / (seats + 1)).toFixed(2);
+            hint.textContent = `💰 ₹${perPerson} per person (including you as host)`;
+            hint.style.color = '#4ade80';
+        } else {
+            hint.textContent = 'Enter seats and cost to see per-person share';
+            hint.style.color = '';
+        }
+    }
+    document.getElementById('available_seats').addEventListener('change', updateCostHint);
+    document.getElementById('fuel_cost').addEventListener('input', updateCostHint);
+
+    const darkMapStyle = [
+        { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
+        { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1a2e' }] },
+        { elementType: 'labels.text.fill', stylers: [{ color: '#9ca3af' }] },
+        { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2d3561' }] },
+        { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f3460' }] },
+        { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#162032' }] },
+    ];
+</script>
+{% endblock %}
