@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from datetime import datetime
+from datetime import datetime, timedelta, date as date_type
 from app import db
 from app.models import Ride, RideRequest, User
 from config import Config
@@ -20,7 +20,7 @@ def host_ride():
         start_lng = request.form.get('start_lng', type=float)
         dest_lat = request.form.get('dest_lat', type=float)
         dest_lng = request.form.get('dest_lng', type=float)
-        destination = request.form.get('destination', 'College Campus').strip()
+        destination = request.form.get('destination', 'SRM IST Campus').strip()
         departure_str = request.form.get('departure_time', '')
         available_seats = request.form.get('available_seats', type=int)
         fuel_cost = request.form.get('fuel_cost', type=float, default=0.0)
@@ -47,7 +47,8 @@ def host_ride():
             return render_template('rides/host.html', errors=errors, form_data=request.form,
                                    maps_key=Config.GOOGLE_MAPS_API_KEY,
                                    college_lat=Config.COLLEGE_LOCATION['lat'],
-                                   college_lng=Config.COLLEGE_LOCATION['lng'])
+                                   college_lng=Config.COLLEGE_LOCATION['lng'],
+                                   college_name=Config.COLLEGE_NAME)
 
         ride = Ride(
             host_id=current_user.id,
@@ -55,8 +56,8 @@ def host_ride():
             start_lat=start_lat,
             start_lng=start_lng,
             destination=destination,
-            dest_lat=dest_lat,
-            dest_lng=dest_lng,
+            dest_lat=dest_lat or Config.COLLEGE_LOCATION['lat'],
+            dest_lng=dest_lng or Config.COLLEGE_LOCATION['lng'],
             departure_time=departure_time,
             available_seats=available_seats,
             total_fuel_cost=fuel_cost,
@@ -65,13 +66,14 @@ def host_ride():
         )
         db.session.add(ride)
         db.session.commit()
-        flash('🚗 Ride posted successfully! Students can now request to join.', 'success')
+        flash('Ride posted successfully! Students can now request to join.', 'success')
         return redirect(url_for('rides.ride_detail', ride_id=ride.id))
 
     return render_template('rides/host.html', errors=[], form_data={},
                            maps_key=Config.GOOGLE_MAPS_API_KEY,
                            college_lat=Config.COLLEGE_LOCATION['lat'],
-                           college_lng=Config.COLLEGE_LOCATION['lng'])
+                           college_lng=Config.COLLEGE_LOCATION['lng'],
+                           college_name=Config.COLLEGE_NAME)
 
 @rides_bp.route('/find', methods=['GET', 'POST'])
 @login_required
@@ -81,23 +83,40 @@ def find_ride():
 
     if request.method == 'POST':
         pickup_location = request.form.get('pickup_location', '').strip()
+        search_date = request.form.get('search_date', '')
         preferred_time = request.form.get('preferred_time', '')
-        search_data = {'pickup_location': pickup_location, 'preferred_time': preferred_time}
+        search_data = {
+            'pickup_location': pickup_location,
+            'search_date': search_date,
+            'preferred_time': preferred_time
+        }
 
         query = Ride.query.filter(
             Ride.status.in_(['pending', 'confirmed']),
             Ride.host_id != current_user.id
         )
-        if preferred_time:
+
+        if search_date:
             try:
-                pref_dt = datetime.strptime(preferred_time, '%Y-%m-%dT%H:%M')
-                from datetime import timedelta
-                time_from = pref_dt - timedelta(hours=1)
-                time_to = pref_dt + timedelta(hours=1)
-                query = query.filter(Ride.departure_time.between(time_from, time_to))
+                search_dt = datetime.strptime(search_date, '%Y-%m-%d')
+                day_start = search_dt.replace(hour=0, minute=0, second=0)
+                day_end = search_dt.replace(hour=23, minute=59, second=59)
+                query = query.filter(Ride.departure_time.between(day_start, day_end))
+                # If time filter also provided, narrow it down further (+/- 1 hour)
+                if preferred_time:
+                    try:
+                        pref_time = datetime.strptime(f"{search_date} {preferred_time}", '%Y-%m-%d %H:%M')
+                        time_from = pref_time - timedelta(hours=1)
+                        time_to = pref_time + timedelta(hours=1)
+                        query = query.filter(Ride.departure_time.between(time_from, time_to))
+                    except ValueError:
+                        pass
             except ValueError:
                 pass
-        query = query.filter(Ride.departure_time >= datetime.now())
+        else:
+            # No date selected — show all upcoming rides
+            query = query.filter(Ride.departure_time >= datetime.now())
+
         rides = query.order_by(Ride.departure_time.asc()).all()
 
         # Exclude rides the user already joined
@@ -150,7 +169,7 @@ def request_ride(ride_id):
     )
     db.session.add(ride_req)
     db.session.commit()
-    flash('✅ Ride request sent! Waiting for host confirmation.', 'success')
+    flash('Ride request sent! Waiting for host confirmation.', 'success')
     return redirect(url_for('rides.ride_detail', ride_id=ride_id))
 
 @rides_bp.route('/ride/<int:ride_id>/manage/<int:request_id>/<action>')
@@ -168,11 +187,11 @@ def manage_request(ride_id, request_id, action):
         else:
             ride_req.status = 'confirmed'
             db.session.commit()
-            flash(f'✅ {ride_req.rider.name}\'s request confirmed!', 'success')
+            flash(f"{ride_req.rider.name}'s request confirmed!", 'success')
     elif action == 'reject':
         ride_req.status = 'rejected'
         db.session.commit()
-        flash(f'❌ {ride_req.rider.name}\'s request rejected.', 'info')
+        flash(f"{ride_req.rider.name}'s request rejected.", 'info')
     return redirect(url_for('rides.ride_detail', ride_id=ride_id))
 
 @rides_bp.route('/ride/<int:ride_id>/status/<status>')

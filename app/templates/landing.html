@@ -1,34 +1,28 @@
 {% extends "base.html" %}
-{% block title %}BroLift — Smart College Carpooling{% endblock %}
+{% block title %}BroLift — Smart College Carpooling for SRM IST{% endblock %}
 {% block content %}
-<!-- Hero Section -->
 <section class="hero">
     <div class="hero-bg"></div>
-    <div class="hero-particles" id="particles"></div>
     <div class="hero-content">
-        <div class="hero-badge">🎓 For College Students Only</div>
+        <div class="hero-badge">For SRM IST Students Only</div>
         <h1 class="hero-title">
             Commute Smarter,<br>
             <span class="gradient-text">Together.</span>
         </h1>
         <p class="hero-subtitle">
-            Share rides to college, split fuel costs, and reduce traffic.<br>
+            Share rides to SRM IST, split fuel costs, and reduce traffic.<br>
             BroLift connects students heading the same way.
         </p>
         <div class="hero-actions">
-            <a href="{{ url_for('auth.register') }}" class="btn-hero-primary">
-                <span>🚀 Get Started Free</span>
-            </a>
-            <a href="{{ url_for('auth.login') }}" class="btn-hero-secondary">
-                <span>Sign In →</span>
-            </a>
+            <a href="{{ url_for('auth.register') }}" class="btn-hero-primary">Get Started Free</a>
+            <a href="{{ url_for('auth.login') }}" class="btn-hero-secondary">Sign In</a>
         </div>
         <div class="hero-stats">
             <div class="stat"><span class="stat-num">50%</span><span class="stat-label">Fuel Saved</span></div>
             <div class="stat-divider"></div>
             <div class="stat"><span class="stat-num">4</span><span class="stat-label">Max Riders</span></div>
             <div class="stat-divider"></div>
-            <div class="stat"><span class="stat-num">🌱</span><span class="stat-label">Eco-Friendly</span></div>
+            <div class="stat"><span class="stat-num">Free</span><span class="stat-label">To Use</span></div>
         </div>
     </div>
     <div class="hero-visual">
@@ -39,27 +33,26 @@
                     <div class="car-name">Rahul's Ride</div>
                     <div class="car-sub">Leaving in 15 mins</div>
                 </div>
-                <span class="car-status confirmed">✓ Confirmed</span>
+                <span class="car-status confirmed">Confirmed</span>
             </div>
             <div class="car-route">
-                <div class="route-point start">📍 Koramangala</div>
+                <div class="route-point start">Koramangala</div>
                 <div class="route-line"></div>
-                <div class="route-point end">🏫 College Campus</div>
+                <div class="route-point end">SRM IST Campus</div>
             </div>
             <div class="car-footer">
                 <div class="seats-row">
-                    <span class="seat taken">👤</span>
-                    <span class="seat taken">👤</span>
-                    <span class="seat taken">👤</span>
+                    <span class="seat taken">●</span>
+                    <span class="seat taken">●</span>
+                    <span class="seat taken">●</span>
                     <span class="seat empty">○</span>
                 </div>
-                <div class="fuel-share">₹45 / person</div>
+                <div class="fuel-share">Rs.45 / person</div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- How It Works -->
 <section class="how-it-works">
     <div class="section-container">
         <div class="section-badge">Simple Process</div>
@@ -67,61 +60,52 @@
         <p class="section-sub">Three easy steps to your next shared ride</p>
         <div class="steps-grid">
             <div class="step-card">
-                <div class="step-icon">📧</div>
                 <div class="step-num">01</div>
-                <h3>Register with College Email</h3>
-                <p>Sign up using your .edu college email to verify you're a student. Only verified students can access
+                <h3>Register with SRM Email</h3>
+                <p>Sign up using your SRM IST email (e.g. st6546@srmist.edu.in). Only verified SRM students can access
                     BroLift.</p>
             </div>
             <div class="step-card">
-                <div class="step-icon">🗺️</div>
                 <div class="step-num">02</div>
                 <h3>Host or Find a Ride</h3>
-                <p>Post your ride with start location, time, and seats — or search for rides near your pickup point.</p>
+                <p>Post your ride with start location, time, and seats — or search for rides by date near your pickup
+                    point.</p>
             </div>
             <div class="step-card">
-                <div class="step-icon">💰</div>
                 <div class="step-num">03</div>
-                <h3>Split Fuel & Go!</h3>
+                <h3>Split Fuel and Go</h3>
                 <p>Fuel cost is automatically split equally among all riders. Everyone saves money. Everyone wins.</p>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Features Section -->
 <section class="features">
     <div class="section-container">
         <div class="section-badge">Why BroLift?</div>
         <h2 class="section-title">Everything You Need</h2>
         <div class="features-grid">
             <div class="feature-item">
-                <div class="feature-icon">🛡️</div>
                 <h4>Students Only</h4>
-                <p>Verified .edu emails ensure a safe, trusted community</p>
+                <p>Verified SRM IST emails ensure a safe, trusted community</p>
             </div>
             <div class="feature-item">
-                <div class="feature-icon">📍</div>
                 <h4>Route Matching</h4>
                 <p>Google Maps powered route display and pickup coordination</p>
             </div>
             <div class="feature-item">
-                <div class="feature-icon">💸</div>
                 <h4>Auto Cost Split</h4>
                 <p>Fuel cost divided equally — no awkward calculations</p>
             </div>
             <div class="feature-item">
-                <div class="feature-icon">⚡</div>
                 <h4>Real-time Status</h4>
                 <p>Track ride status from pending to confirmed to completed</p>
             </div>
             <div class="feature-item">
-                <div class="feature-icon">🌱</div>
                 <h4>Eco Commuting</h4>
                 <p>Fewer cars, less traffic, lower carbon footprint</p>
             </div>
             <div class="feature-item">
-                <div class="feature-icon">👥</div>
                 <h4>Max 4 Passengers</h4>
                 <p>Comfortable, safe rides with up to 4 co-passengers</p>
             </div>
@@ -129,14 +113,11 @@
     </div>
 </section>
 
-<!-- CTA -->
 <section class="cta">
     <div class="cta-container">
         <h2>Ready to Ride Smarter?</h2>
-        <p>Join hundreds of students already commuting together</p>
-        <a href="{{ url_for('auth.register') }}" class="btn-hero-primary">
-            🎓 Register with College Email
-        </a>
+        <p>Join SRM students already commuting together</p>
+        <a href="{{ url_for('auth.register') }}" class="btn-hero-primary">Register with SRM Email</a>
     </div>
 </section>
 {% endblock %}

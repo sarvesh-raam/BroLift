@@ -1,10 +1,16 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
+import re
 from app import db
 from app.models import User
 from config import Config
 
 auth_bp = Blueprint('auth', __name__)
+
+def is_valid_srm_email(email):
+    """Validate SRM IST email: 2 letters + 4 digits @srmist.edu.in"""
+    pattern = r'^[a-zA-Z]{2}\d{4}@srmist\.edu\.in$'
+    return bool(re.match(pattern, email.lower()))
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -22,8 +28,8 @@ def register():
         errors = []
         if not name:
             errors.append('Name is required.')
-        if not email or not email.endswith('.edu'):
-            errors.append('Only college (.edu) email addresses are allowed.')
+        if not email or not is_valid_srm_email(email):
+            errors.append('Only valid SRM IST emails are allowed (e.g. st6546@srmist.edu.in).')
         if User.query.filter_by(email=email).first():
             errors.append('Email already registered.')
         if len(password) < 6:
@@ -40,7 +46,7 @@ def register():
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        flash('🎉 Account created! Welcome to BroLift!', 'success')
+        flash('Account created! Welcome to BroLift.', 'success')
         login_user(user)
         return redirect(url_for('dashboard.index'))
 
@@ -53,12 +59,11 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
-        remember = request.form.get('remember') == 'on'
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
-            login_user(user, remember=remember)
+            login_user(user)
             next_page = request.args.get('next')
-            flash(f'Welcome back, {user.name}! 👋', 'success')
+            flash(f'Welcome back, {user.name}!', 'success')
             return redirect(next_page or url_for('dashboard.index'))
         flash('Invalid email or password.', 'danger')
     return render_template('auth/login.html')
