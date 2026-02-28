@@ -3,10 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}BroLift — College Carpooling{% endblock %}</title>
-    <meta name="description"
-        content="BroLift — Smart carpooling for SRM IST students. Share rides, split fuel costs, and commute sustainably.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>{% block title %}BroLift{% endblock %}</title>
+    <meta name="description" content="BroLift — Smart carpooling for SRM IST students.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -42,11 +41,11 @@
 
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="flash-container">
+    <div class="flash-container" id="flash-container">
         {% for category, message in messages %}
         <div class="flash flash-{{ category }}">
             <span>{{ message }}</span>
-            <button onclick="this.parentElement.remove()">x</button>
+            <button onclick="this.parentElement.remove()">✕</button>
         </div>
         {% endfor %}
     </div>
@@ -57,22 +56,32 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="footer">
-        <div class="footer-container">
-            <div class="footer-brand">
-                <span class="logo-text">Bro<span class="logo-accent">Lift</span></span>
-                <p>Smarter commutes for SRM students.</p>
-            </div>
-            <div class="footer-links">
-                <a href="{{ url_for('rides.find_ride') }}">Find a Ride</a>
-                <a href="{{ url_for('rides.host_ride') }}">Host a Ride</a>
-                <a href="{{ url_for('auth.register') }}">Register</a>
-            </div>
-            <div class="footer-copy">
-                <p>© 2024 BroLift. Built for SRM IST students.</p>
-            </div>
-        </div>
-    </footer>
+    {% if current_user.is_authenticated %}
+    <nav class="bottom-nav">
+        <a href="{{ url_for('dashboard.index') }}"
+            class="bn-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+            <span class="bn-icon">&#8962;</span>
+            <span>Home</span>
+        </a>
+        <a href="{{ url_for('rides.find_ride') }}"
+            class="bn-item {% if request.endpoint == 'rides.find_ride' %}active{% endif %}">
+            <span class="bn-icon">&#128269;</span>
+            <span>Find</span>
+        </a>
+        {% if current_user.has_vehicle %}
+        <a href="{{ url_for('rides.host_ride') }}"
+            class="bn-item {% if request.endpoint == 'rides.host_ride' %}active{% endif %}">
+            <span class="bn-icon">&#43;</span>
+            <span>Host</span>
+        </a>
+        {% endif %}
+        <a href="{{ url_for('auth.profile') }}"
+            class="bn-item {% if request.endpoint == 'auth.profile' %}active{% endif %}">
+            <span class="bn-icon">&#128100;</span>
+            <span>Profile</span>
+        </a>
+    </nav>
+    {% endif %}
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_scripts %}{% endblock %}
