@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}Ride Details — BroLift{% endblock %}
+{% block extra_head %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initDetailMap" async
+    defer></script>
+{% endblock %}
+{% block content %}
+<div class="page-container">
+    <a href="{{ url_for('dashboard.index') }}" class="back-link">← Back to Dashboard</a>
+
+    <div class="detail-layout">
+        <!-- Left: Ride Info -->
+        <div class="detail-main">
+            <!-- Ride Header -->
+            <div class="detail-card ride-header-card">
+                <div class="ride-status-banner status-{{ ride.status }}">
+                    {% if ride.status == 'pending' %}⏳ Pending Confirmation
+                    {% elif ride.status == 'confirmed' %}✅ Confirmed
+                    {% elif ride.status == 'completed' %}🏁 Completed
+                    {% else %}❌ Cancelled{% endif %}
+                </div>
+                <div class="ride-host-section">
+                    <div class="host-avatar-large">{{ ride.host.name[0].upper() }}</div>
+                    <div class="host-details">
+                        <h2>{{ ride.host.name }}</h2>
+                        <p>{{ ride.host.email }}</p>
+                        {% if ride.host.car_model %}
+                        <p>🚗 {{ ride.host.car_model }} · {{ ride.host.car_number }}</p>
+                        {% endif %}
+                    </div>
+                    {% if current_user.id == ride.host_id %}
+                    <span class="you-badge">You</span>
+                    {% endif %}
+                </div>
+
+                <div class="ride-route-detail">
+                    <div class="route-stop start-stop">
+                        <div class="stop-dot green-dot"></div>
+                        <div>
+                            <div class="stop-label">Start</div>
+                            <div class="stop-location">{{ ride.start_location }}</div>
+                        </div>
+                    </div>
+                    <div class="route-line-vertical"></div>
+                    <div class="route-stop end-stop">
+                        <div class="stop-dot blue-dot"></div>
+                        <div>
+                            <div class="stop-label">Destination</div>
+                            <div class="stop-location">{{ ride.destination }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ride-meta-grid">
+                    <div class="meta-card">
+                        <div class="meta-icon">🕐</div>
+                        <div class="meta-label">Departure</div>
+                        <div class="meta-value">{{ ride.departure_time.strftime('%d %b %Y') }}</div>
+                        <div class="meta-sub">{{ ride.departure_time.strftime('%I:%M %p') }}</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-icon">💺</div>
+                        <div class="meta-label">Seats</div>
+                        <div class="meta-value">{{ ride.seats_available }} left</div>
+                        <div class="meta-sub">of {{ ride.available_seats }}</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-icon">⛽</div>
+                        <div class="meta-label">Total Cost</div>
+                        <div class="meta-value">₹{{ ride.total_fuel_cost }}</div>
+                        <div class="meta-sub">full fuel</div>
+                    </div>
+                    <div class="meta-card highlight-card">
+                        <div class="meta-icon">💰</div>
+                        <div class="meta-label">Your Share</div>
+                        <div class="meta-value">₹{{ ride.cost_per_person }}</div>
+                        <div class="meta-sub">per person</div>
+                    </div>
+                </div>
+
+                {% if ride.notes %}
+                <div class="ride-notes-box">
+                    <strong>📝 Host Notes:</strong> {{ ride.notes }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Passengers -->
+            <div class="detail-card">
+                <h3 class="detail-section-title">👥 Co-Passengers ({{ ride.seats_taken }}/{{ ride.available_seats }})
+                </h3>
+                {% set confirmed = ride.confirmed_passengers %}
+                <div class="seats-visual">
+                    {% for i in range(ride.available_seats) %}
+                    {% if i < confirmed|length %} <div class="seat-slot filled">
+                        <span>{{ confirmed[i].rider.name[0].upper() }}</span>
+                        <div class="seat-name">{{ confirmed[i].rider.name.split()[0] }}</div>
+                </div>
+                {% else %}
+                <div class="seat-slot empty-slot">
+                    <span>○</span>
+                    <div class="seat-name">Open</div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            {% if confirmed %}
+            <div class="passengers-list">
+                {% for req in confirmed %}
+                <div class="passenger-item">
+                    <div class="p-avatar">{{ req.rider.name[0].upper() }}</div>
+                    <div class="p-info">
+                        <div class="p-name">{{ req.rider.name }}</div>
+                        <div class="p-pickup">📍 {{ req.pickup_location }}</div>
+                    </div>
+                    <span class="ride-badge status-confirmed">✅ Confirmed</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Host Controls -->
+        {% if current_user.id == ride.host_id %}
+        <div class="detail-card">
+            <h3 class="detail-section-title">⚙️ Host Controls</h3>
+            {% set pending_reqs = ride.requests | selectattr('status', 'equalto', 'pending') | list %}
+            {% if pending_reqs %}
+            <h4 style="margin-bottom:1rem;color:var(--text-muted)">📬 Pending Requests ({{ pending_reqs|length }})</h4>
+            {% for req in pending_reqs %}
+            <div class="request-item">
+                <div class="req-user">
+                    <div class="r-avatar">{{ req.rider.name[0].upper() }}</div>
+                    <div>
+                        <div class="r-name">{{ req.rider.name }}</div>
+                        <div class="r-pickup">📍 {{ req.pickup_location }}</div>
+                        {% if req.message %}<div class="r-msg">💬 "{{ req.message }}"</div>{% endif %}
+                    </div>
+                </div>
+                <div class="req-actions">
+                    <a href="{{ url_for('rides.manage_request', ride_id=ride.id, request_id=req.id, action='confirm') }}"
+                        class="btn-confirm">✅ Confirm</a>
+                    <a href="{{ url_for('rides.manage_request', ride_id=ride.id, request_id=req.id, action='reject') }}"
+                        class="btn-reject">❌ Reject</a>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p style="color:var(--text-muted);margin-bottom:1.5rem">No pending requests.</p>
+            {% endif %}
+
+            <div class="status-controls">
+                <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:0.75rem">Update Ride Status:</p>
+                <div class="status-btn-row">
+                    {% if ride.status == 'pending' %}
+                    <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='confirmed') }}"
+                        class="btn-status confirmed">✅ Confirm Ride</a>
+                    {% endif %}
+                    {% if ride.status in ['pending', 'confirmed'] %}
+                    <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='completed') }}"
+                        class="btn-status completed">🏁 Mark Complete</a>
+                    <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='cancelled') }}"
+                        class="btn-status cancelled">❌ Cancel Ride</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Request Ride (for non-host) -->
+        {% if current_user.id != ride.host_id %}
+        <div class="detail-card">
+            {% if user_request %}
+            <div class="my-request-status">
+                <h3>Your Request Status</h3>
+                <div class="request-status-banner status-{{ user_request.status }}">
+                    {% if user_request.status == 'pending' %}⏳ Your request is pending host approval
+                    {% elif user_request.status == 'confirmed' %}✅ Your request is confirmed! Get ready.
+                    {% else %}❌ Your request was not accepted{% endif %}
+                </div>
+                <div class="req-detail">📍 Pickup: {{ user_request.pickup_location }}</div>
+                {% if user_request.status == 'pending' %}
+                <a href="{{ url_for('rides.cancel_request', ride_id=ride.id) }}" class="btn-reject"
+                    style="margin-top:1rem;display:inline-block">Cancel Request</a>
+                {% endif %}
+            </div>
+            {% elif ride.status in ['pending', 'confirmed'] and ride.seats_available > 0 %}
+            <h3 class="detail-section-title">🙋 Request to Join</h3>
+            <form method="POST" action="{{ url_for('rides.request_ride', ride_id=ride.id) }}">
+                <div class="form-group">
+                    <label for="pickup_location">📍 Your Pickup Location</label>
+                    <input type="text" id="pickup_location" name="pickup_location"
+                        placeholder="Where should the host pick you up?" required autocomplete="off">
+                    <input type="hidden" id="pickup_lat" name="pickup_lat">
+                    <input type="hidden" id="pickup_lng" name="pickup_lng">
+                </div>
+                <div class="form-group">
+                    <label for="message">💬 Message to Host (Optional)</label>
+                    <textarea id="message" name="message" rows="2"
+                        placeholder="Hi! I'm near the main gate..."></textarea>
+                </div>
+                <div class="cost-preview">
+                    <span>💰 Your fuel share: </span>
+                    <strong>₹{{ ride.cost_per_person }}</strong>
+                </div>
+                <button type="submit" class="btn-form-submit">🙋 Send Request</button>
+            </form>
+            {% elif ride.seats_available == 0 %}
+            <div class="full-notice">💺 This ride is full. Check other rides.</div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Map -->
+    <div class="detail-map-col">
+        <div class="map-card sticky-map">
+            <div class="map-label">🗺️ Route Map</div>
+            <div id="detail-map" class="google-map"></div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+    var COLLEGE_LAT = {{ college_lat }};
+    var COLLEGE_LNG = {{ college_lng }};
+    var START_LAT = {{ ride.start_lat if ride.start_lat else college_lat }};
+    var START_LNG = {{ ride.start_lng if ride.start_lng else college_lng }};
+    var HAS_START = {{ 'true' if ride.start_lat and ride.start_lng else 'false' }};
+
+    var PASSENGER_MARKERS = [
+        {% for req in ride.confirmed_passengers %}
+    {% if req.pickup_lat and req.pickup_lng %}
+    { lat: { { req.pickup_lat } }, lng: { { req.pickup_lng } }, name: { { req.rider.name | tojson } } },
+    {% endif %}
+    {% endfor %}
+    ];
+
+    var darkMapStyle = [
+        { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
+        { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1a2e' }] },
+        { elementType: 'labels.text.fill', stylers: [{ color: '#9ca3af' }] },
+        { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2d3561' }] },
+        { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f3460' }] },
+        { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#162032' }] }
+    ];
+
+    function initDetailMap() {
+        var map = new google.maps.Map(document.getElementById('detail-map'), {
+            center: { lat: (COLLEGE_LAT + START_LAT) / 2, lng: (COLLEGE_LNG + START_LNG) / 2 },
+            zoom: 12,
+            styles: darkMapStyle
+        });
+
+        if (HAS_START) {
+            var directionsService = new google.maps.DirectionsService();
+            var directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
+            directionsService.route({
+                origin: { lat: START_LAT, lng: START_LNG },
+                destination: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
+                travelMode: google.maps.TravelMode.DRIVING
+            }, function (result, status) {
+                if (status === 'OK') directionsRenderer.setDirections(result);
+            });
+        } else {
+            new google.maps.Marker({
+                position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
+                map: map,
+                title: 'College Campus',
+                icon: { url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }
+            });
+        }
+
+        // Passenger pickup markers
+        PASSENGER_MARKERS.forEach(function (p) {
+            new google.maps.Marker({
+                position: { lat: p.lat, lng: p.lng },
+                map: map,
+                title: p.name + ' pickup',
+                icon: { url: 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png' }
+            });
+        });
+
+        // Autocomplete for pickup
+        var inp = document.getElementById('pickup_location');
+        if (inp) {
+            var ac = new google.maps.places.Autocomplete(inp, { componentRestrictions: { country: 'in' } });
+            ac.addListener('place_changed', function () {
+                var place = ac.getPlace();
+                if (place.geometry) {
+                    document.getElementById('pickup_lat').value = place.geometry.location.lat();
+                    document.getElementById('pickup_lng').value = place.geometry.location.lng();
+                }
+            });
+        }
+    }
+</script>
+{% endblock %}
