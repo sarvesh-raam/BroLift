@@ -14,18 +14,18 @@
             <!-- Ride Header -->
             <div class="detail-card ride-header-card">
                 <div class="ride-status-banner status-{{ ride.status }}">
-                    {% if ride.status == 'pending' %}⏳ Pending Confirmation
-                    {% elif ride.status == 'confirmed' %}✅ Confirmed
-                    {% elif ride.status == 'completed' %}🏁 Completed
-                    {% else %}❌ Cancelled{% endif %}
+                    {% if ride.status == 'confirmed' %}Live — Accepting Riders
+                    {% elif ride.status == 'completed' %}Completed
+                    {% else %}Cancelled{% endif %}
                 </div>
                 <div class="ride-host-section">
                     <div class="host-avatar-large">{{ ride.host.name[0].upper() }}</div>
                     <div class="host-details">
                         <h2>{{ ride.host.name }}</h2>
                         <p>{{ ride.host.email }}</p>
-                        {% if ride.host.car_model %}
-                        <p>🚗 {{ ride.host.car_model }} · {{ ride.host.car_number }}</p>
+                        {% if ride.host.vehicle_model %}
+                        <p>{{ ride.host.vehicle_type | title }} — {{ ride.host.vehicle_model }} · {{
+                            ride.host.vehicle_number }}</p>
                         {% endif %}
                     </div>
                     {% if current_user.id == ride.host_id %}
@@ -51,44 +51,59 @@
                     </div>
                 </div>
 
+                <!-- Directions Button -->
+                {% if ride.start_lat and ride.start_lng %}
+                <a href="https://www.google.com/maps/dir/?api=1&origin={{ ride.start_lat }},{{ ride.start_lng }}&destination={{ college_lat }},{{ college_lng }}&travelmode=driving"
+                    target="_blank" class="btn-directions">
+                    Open in Google Maps
+                </a>
+                {% endif %}
+
                 <div class="ride-meta-grid">
                     <div class="meta-card">
-                        <div class="meta-icon">🕐</div>
+                        <div class="meta-icon-txt">TIME</div>
                         <div class="meta-label">Departure</div>
                         <div class="meta-value">{{ ride.departure_time.strftime('%d %b %Y') }}</div>
                         <div class="meta-sub">{{ ride.departure_time.strftime('%I:%M %p') }}</div>
                     </div>
                     <div class="meta-card">
-                        <div class="meta-icon">💺</div>
+                        <div class="meta-icon-txt">SEAT</div>
                         <div class="meta-label">Seats</div>
                         <div class="meta-value">{{ ride.seats_available }} left</div>
                         <div class="meta-sub">of {{ ride.available_seats }}</div>
                     </div>
+                    {% if ride.distance_km %}
                     <div class="meta-card">
-                        <div class="meta-icon">⛽</div>
+                        <div class="meta-icon-txt">KM</div>
+                        <div class="meta-label">Distance</div>
+                        <div class="meta-value">{{ ride.distance_km }} km</div>
+                        <div class="meta-sub">total route</div>
+                    </div>
+                    {% endif %}
+                    <div class="meta-card">
+                        <div class="meta-icon-txt">FUEL</div>
                         <div class="meta-label">Total Cost</div>
-                        <div class="meta-value">₹{{ ride.total_fuel_cost }}</div>
+                        <div class="meta-value">Rs.{{ ride.total_fuel_cost }}</div>
                         <div class="meta-sub">full fuel</div>
                     </div>
                     <div class="meta-card highlight-card">
-                        <div class="meta-icon">💰</div>
+                        <div class="meta-icon-txt">SHARE</div>
                         <div class="meta-label">Your Share</div>
-                        <div class="meta-value">₹{{ ride.cost_per_person }}</div>
+                        <div class="meta-value">Rs.{{ ride.cost_per_person }}</div>
                         <div class="meta-sub">per person</div>
                     </div>
                 </div>
 
                 {% if ride.notes %}
                 <div class="ride-notes-box">
-                    <strong>📝 Host Notes:</strong> {{ ride.notes }}
+                    <strong>Host Notes:</strong> {{ ride.notes }}
                 </div>
                 {% endif %}
             </div>
 
             <!-- Passengers -->
             <div class="detail-card">
-                <h3 class="detail-section-title">👥 Co-Passengers ({{ ride.seats_taken }}/{{ ride.available_seats }})
-                </h3>
+                <h3 class="detail-section-title">Passengers ({{ ride.seats_taken }}/{{ ride.available_seats }})</h3>
                 {% set confirmed = ride.confirmed_passengers %}
                 <div class="seats-visual">
                     {% for i in range(ride.available_seats) %}
@@ -112,9 +127,9 @@
                     <div class="p-avatar">{{ req.rider.name[0].upper() }}</div>
                     <div class="p-info">
                         <div class="p-name">{{ req.rider.name }}</div>
-                        <div class="p-pickup">📍 {{ req.pickup_location }}</div>
+                        <div class="p-pickup">Pickup: {{ req.pickup_location }}</div>
                     </div>
-                    <span class="ride-badge status-confirmed">✅ Confirmed</span>
+                    <span class="ride-badge status-confirmed">Confirmed</span>
                 </div>
                 {% endfor %}
             </div>
@@ -124,25 +139,25 @@
         <!-- Host Controls -->
         {% if current_user.id == ride.host_id %}
         <div class="detail-card">
-            <h3 class="detail-section-title">⚙️ Host Controls</h3>
+            <h3 class="detail-section-title">Host Controls</h3>
             {% set pending_reqs = ride.requests | selectattr('status', 'equalto', 'pending') | list %}
             {% if pending_reqs %}
-            <h4 style="margin-bottom:1rem;color:var(--text-muted)">📬 Pending Requests ({{ pending_reqs|length }})</h4>
+            <h4 style="margin-bottom:1rem;color:var(--text-muted)">Pending Requests ({{ pending_reqs|length }})</h4>
             {% for req in pending_reqs %}
             <div class="request-item">
                 <div class="req-user">
                     <div class="r-avatar">{{ req.rider.name[0].upper() }}</div>
                     <div>
                         <div class="r-name">{{ req.rider.name }}</div>
-                        <div class="r-pickup">📍 {{ req.pickup_location }}</div>
-                        {% if req.message %}<div class="r-msg">💬 "{{ req.message }}"</div>{% endif %}
+                        <div class="r-pickup">Pickup: {{ req.pickup_location }}</div>
+                        {% if req.message %}<div class="r-msg">"{{ req.message }}"</div>{% endif %}
                     </div>
                 </div>
                 <div class="req-actions">
                     <a href="{{ url_for('rides.manage_request', ride_id=ride.id, request_id=req.id, action='confirm') }}"
-                        class="btn-confirm">✅ Confirm</a>
+                        class="btn-confirm">Confirm</a>
                     <a href="{{ url_for('rides.manage_request', ride_id=ride.id, request_id=req.id, action='reject') }}"
-                        class="btn-reject">❌ Reject</a>
+                        class="btn-reject">Reject</a>
                 </div>
             </div>
             {% endfor %}
@@ -151,17 +166,13 @@
             {% endif %}
 
             <div class="status-controls">
-                <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:0.75rem">Update Ride Status:</p>
+                <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:0.75rem">Update Ride:</p>
                 <div class="status-btn-row">
-                    {% if ride.status == 'pending' %}
-                    <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='confirmed') }}"
-                        class="btn-status confirmed">✅ Confirm Ride</a>
-                    {% endif %}
-                    {% if ride.status in ['pending', 'confirmed'] %}
+                    {% if ride.status == 'confirmed' %}
                     <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='completed') }}"
-                        class="btn-status completed">🏁 Mark Complete</a>
+                        class="btn-status completed">Mark Complete</a>
                     <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='cancelled') }}"
-                        class="btn-status cancelled">❌ Cancel Ride</a>
+                        class="btn-status cancelled">Cancel Ride</a>
                     {% endif %}
                 </div>
             </div>
@@ -173,41 +184,46 @@
         <div class="detail-card">
             {% if user_request %}
             <div class="my-request-status">
-                <h3>Your Request Status</h3>
+                <h3>Your Request</h3>
                 <div class="request-status-banner status-{{ user_request.status }}">
-                    {% if user_request.status == 'pending' %}⏳ Your request is pending host approval
-                    {% elif user_request.status == 'confirmed' %}✅ Your request is confirmed! Get ready.
-                    {% else %}❌ Your request was not accepted{% endif %}
+                    {% if user_request.status == 'pending' %}Pending host approval
+                    {% elif user_request.status == 'confirmed' %}Confirmed! Get ready.
+                    {% else %}Not accepted{% endif %}
                 </div>
-                <div class="req-detail">📍 Pickup: {{ user_request.pickup_location }}</div>
+                <div class="req-detail">Pickup: {{ user_request.pickup_location }}</div>
                 {% if user_request.status == 'pending' %}
                 <a href="{{ url_for('rides.cancel_request', ride_id=ride.id) }}" class="btn-reject"
                     style="margin-top:1rem;display:inline-block">Cancel Request</a>
                 {% endif %}
             </div>
-            {% elif ride.status in ['pending', 'confirmed'] and ride.seats_available > 0 %}
-            <h3 class="detail-section-title">🙋 Request to Join</h3>
+            {% elif ride.status == 'confirmed' and ride.seats_available > 0 %}
+            <h3 class="detail-section-title">Request to Join</h3>
             <form method="POST" action="{{ url_for('rides.request_ride', ride_id=ride.id) }}">
                 <div class="form-group">
-                    <label for="pickup_location">📍 Your Pickup Location</label>
+                    <label for="pickup_location">Your Pickup Location</label>
                     <input type="text" id="pickup_location" name="pickup_location"
-                        placeholder="Where should the host pick you up?" required autocomplete="off">
+                        placeholder="Start typing your pickup point..." required autocomplete="off">
                     <input type="hidden" id="pickup_lat" name="pickup_lat">
                     <input type="hidden" id="pickup_lng" name="pickup_lng">
+                    <span class="form-hint">Type to search or click on the map below to pin your location</span>
+                </div>
+                <!-- Mini map for pin location -->
+                <div id="pickup-map"
+                    style="width:100%;height:200px;border-radius:var(--radius-sm);margin-bottom:1rem;border:1px solid var(--border);">
                 </div>
                 <div class="form-group">
-                    <label for="message">💬 Message to Host (Optional)</label>
+                    <label for="message">Message to Host (Optional)</label>
                     <textarea id="message" name="message" rows="2"
-                        placeholder="Hi! I'm near the main gate..."></textarea>
+                        placeholder="Hi! I'll be at the main gate..."></textarea>
                 </div>
                 <div class="cost-preview">
-                    <span>💰 Your fuel share: </span>
-                    <strong>₹{{ ride.cost_per_person }}</strong>
+                    <span>Your fuel share: </span>
+                    <strong>Rs.{{ ride.cost_per_person }}</strong>
                 </div>
-                <button type="submit" class="btn-form-submit">🙋 Send Request</button>
+                <button type="submit" class="btn-form-submit">Send Request</button>
             </form>
             {% elif ride.seats_available == 0 %}
-            <div class="full-notice">💺 This ride is full. Check other rides.</div>
+            <div class="full-notice">This ride is full. Check other rides.</div>
             {% endif %}
         </div>
         {% endif %}
@@ -216,7 +232,7 @@
     <!-- Right: Map -->
     <div class="detail-map-col">
         <div class="map-card sticky-map">
-            <div class="map-label">🗺️ Route Map</div>
+            <div class="map-label">Route Map</div>
             <div id="detail-map" class="google-map"></div>
         </div>
     </div>
@@ -237,7 +253,7 @@
     { lat: { { req.pickup_lat } }, lng: { { req.pickup_lng } }, name: { { req.rider.name | tojson } } },
     {% endif %}
     {% endfor %}
-    ];
+];
 
     var darkMapStyle = [
         { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
@@ -248,54 +264,78 @@
         { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#162032' }] }
     ];
 
+    var pickupMap, pickupMarker;
+
     function initDetailMap() {
+        // Main route map
         var map = new google.maps.Map(document.getElementById('detail-map'), {
             center: { lat: (COLLEGE_LAT + START_LAT) / 2, lng: (COLLEGE_LNG + START_LNG) / 2 },
-            zoom: 12,
-            styles: darkMapStyle
+            zoom: 11, styles: darkMapStyle
         });
 
         if (HAS_START) {
-            var directionsService = new google.maps.DirectionsService();
-            var directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
-            directionsService.route({
+            var ds = new google.maps.DirectionsService();
+            var dr = new google.maps.DirectionsRenderer({ map: map });
+            ds.route({
                 origin: { lat: START_LAT, lng: START_LNG },
                 destination: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
                 travelMode: google.maps.TravelMode.DRIVING
             }, function (result, status) {
-                if (status === 'OK') directionsRenderer.setDirections(result);
+                if (status === 'OK') dr.setDirections(result);
             });
         } else {
-            new google.maps.Marker({
-                position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-                map: map,
-                title: 'College Campus',
-                icon: { url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }
-            });
+            new google.maps.Marker({ position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG }, map: map, title: 'SRM IST' });
         }
 
-        // Passenger pickup markers
         PASSENGER_MARKERS.forEach(function (p) {
             new google.maps.Marker({
-                position: { lat: p.lat, lng: p.lng },
-                map: map,
-                title: p.name + ' pickup',
+                position: { lat: p.lat, lng: p.lng }, map: map, title: p.name + ' pickup',
                 icon: { url: 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png' }
             });
         });
 
-        // Autocomplete for pickup
-        var inp = document.getElementById('pickup_location');
-        if (inp) {
-            var ac = new google.maps.places.Autocomplete(inp, { componentRestrictions: { country: 'in' } });
-            ac.addListener('place_changed', function () {
-                var place = ac.getPlace();
-                if (place.geometry) {
-                    document.getElementById('pickup_lat').value = place.geometry.location.lat();
-                    document.getElementById('pickup_lng').value = place.geometry.location.lng();
-                }
+        // Pickup mini-map (for riders requesting a seat)
+        var pickupMapEl = document.getElementById('pickup-map');
+        if (pickupMapEl) {
+            pickupMap = new google.maps.Map(pickupMapEl, {
+                center: { lat: START_LAT, lng: START_LNG },
+                zoom: 13, styles: darkMapStyle
             });
+            pickupMap.addListener('click', function (e) {
+                setPickupPin(e.latLng.lat(), e.latLng.lng());
+                // Reverse geocode to get address
+                var geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ location: e.latLng }, function (results, status) {
+                    if (status === 'OK' && results[0]) {
+                        document.getElementById('pickup_location').value = results[0].formatted_address;
+                    }
+                });
+            });
+
+            // Autocomplete on pickup input
+            var inp = document.getElementById('pickup_location');
+            if (inp) {
+                var ac = new google.maps.places.Autocomplete(inp, { componentRestrictions: { country: 'in' } });
+                ac.addListener('place_changed', function () {
+                    var place = ac.getPlace();
+                    if (place.geometry) {
+                        setPickupPin(place.geometry.location.lat(), place.geometry.location.lng());
+                        pickupMap.setCenter(place.geometry.location);
+                    }
+                });
+            }
         }
+    }
+
+    function setPickupPin(lat, lng) {
+        document.getElementById('pickup_lat').value = lat;
+        document.getElementById('pickup_lng').value = lng;
+        if (pickupMarker) pickupMarker.setMap(null);
+        pickupMarker = new google.maps.Marker({
+            position: { lat: lat, lng: lng }, map: pickupMap,
+            title: 'Your pickup', animation: google.maps.Animation.DROP,
+            icon: { url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' }
+        });
     }
 </script>
 {% endblock %}

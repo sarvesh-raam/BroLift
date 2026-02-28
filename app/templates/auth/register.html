@@ -3,14 +3,12 @@
 {% block content %}
 <div class="auth-page">
     <div class="auth-left">
-        <div class="auth-brand">
-            <span class="logo-text">Bro<span class="logo-accent">Lift</span></span>
-        </div>
+        <div class="auth-brand"><span class="logo-text">Bro<span class="logo-accent">Lift</span></span></div>
         <h2>Join the Community</h2>
-        <p>Connect with fellow SRM students and make commuting cheaper and greener.</p>
+        <p>Connect with SRM students and make commuting cheaper and greener.</p>
         <div class="auth-perks">
             <div class="perk">Only for verified SRM IST students</div>
-            <div class="perk">Split fuel costs automatically</div>
+            <div class="perk">Auto-calculated fuel cost split</div>
             <div class="perk">Google Maps route navigation</div>
         </div>
     </div>
@@ -21,9 +19,7 @@
 
             {% if errors %}
             <div class="error-list">
-                {% for error in errors %}
-                <div class="error-item">{{ error }}</div>
-                {% endfor %}
+                {% for error in errors %}<div class="error-item">{{ error }}</div>{% endfor %}
             </div>
             {% endif %}
 
@@ -53,25 +49,63 @@
 
                 <div class="form-toggle-group">
                     <label class="toggle-label">
-                        <input type="checkbox" id="has_car" name="has_car" onchange="toggleCarFields(this.checked)" {%
-                            if form_data.get('has_car') %}checked{% endif %}>
+                        <input type="checkbox" id="has_vehicle" name="has_vehicle"
+                            onchange="toggleVehicleFields(this.checked)" {% if form_data.get('has_vehicle') %}checked{%
+                            endif %}>
                         <span class="toggle-slider"></span>
-                        <span class="toggle-text">I have a car and want to host rides</span>
+                        <span class="toggle-text">I have a vehicle and want to host rides</span>
                     </label>
                 </div>
 
-                <div id="car-fields" class="car-fields" style="display:none;">
+                <div id="vehicle-fields" style="display:none;">
+                    <!-- Vehicle type -->
+                    <div class="form-group">
+                        <label>Vehicle Type</label>
+                        <div class="radio-group">
+                            <label class="radio-opt">
+                                <input type="radio" name="vehicle_type" value="car" onchange="toggleVehicleType('car')"
+                                    {% if form_data.get('vehicle_type', 'car' )=='car' %}checked{% endif %}> Car
+                            </label>
+                            <label class="radio-opt">
+                                <input type="radio" name="vehicle_type" value="bike"
+                                    onchange="toggleVehicleType('bike')" {% if form_data.get('vehicle_type')=='bike'
+                                    %}checked{% endif %}> Bike
+                            </label>
+                        </div>
+                    </div>
+                    <!-- Car capacity (only for car) -->
+                    <div id="car-capacity-field" class="form-group">
+                        <label>Car Seating Capacity</label>
+                        <div class="radio-group">
+                            <label class="radio-opt">
+                                <input type="radio" name="vehicle_capacity" value="5" {% if
+                                    form_data.get('vehicle_capacity', '5' )=='5' %}checked{% endif %}> 5-Seater
+                            </label>
+                            <label class="radio-opt">
+                                <input type="radio" name="vehicle_capacity" value="7" {% if
+                                    form_data.get('vehicle_capacity')=='7' %}checked{% endif %}> 7-Seater
+                            </label>
+                        </div>
+                    </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="car_model">Car Model</label>
-                            <input type="text" id="car_model" name="car_model" placeholder="e.g. Honda City"
-                                value="{{ form_data.get('car_model', '') }}">
+                            <label for="vehicle_model">Vehicle Model</label>
+                            <input type="text" id="vehicle_model" name="vehicle_model"
+                                placeholder="e.g. Honda City / TVS Apache"
+                                value="{{ form_data.get('vehicle_model', '') }}">
                         </div>
                         <div class="form-group">
-                            <label for="car_number">Car Number</label>
-                            <input type="text" id="car_number" name="car_number" placeholder="e.g. TN01AB1234"
-                                value="{{ form_data.get('car_number', '') }}">
+                            <label for="vehicle_number">Vehicle Number</label>
+                            <input type="text" id="vehicle_number" name="vehicle_number" placeholder="e.g. TN01AB1234"
+                                value="{{ form_data.get('vehicle_number', '') }}">
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle_mileage">Mileage (km per litre)</label>
+                        <input type="number" id="vehicle_mileage" name="vehicle_mileage"
+                            placeholder="e.g. 15 for car, 40 for bike" step="0.1" min="1"
+                            value="{{ form_data.get('vehicle_mileage', '15') }}">
+                        <span class="form-hint">Used to auto-calculate fuel cost when hosting</span>
                     </div>
                 </div>
 
@@ -84,12 +118,17 @@
 {% endblock %}
 {% block extra_scripts %}
 <script>
-    function toggleCarFields(show) {
-        document.getElementById('car-fields').style.display = show ? 'block' : 'none';
+    function toggleVehicleFields(show) {
+        document.getElementById('vehicle-fields').style.display = show ? 'block' : 'none';
+    }
+    function toggleVehicleType(type) {
+        document.getElementById('car-capacity-field').style.display = (type === 'car') ? 'block' : 'none';
     }
     window.onload = function () {
-        var cb = document.getElementById('has_car');
-        if (cb && cb.checked) toggleCarFields(true);
-    }
+        var cb = document.getElementById('has_vehicle');
+        if (cb && cb.checked) toggleVehicleFields(true);
+        var bikeRadio = document.querySelector('input[name="vehicle_type"][value="bike"]');
+        if (bikeRadio && bikeRadio.checked) toggleVehicleType('bike');
+    };
 </script>
 {% endblock %}

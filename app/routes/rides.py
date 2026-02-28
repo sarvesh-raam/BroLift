@@ -61,12 +61,14 @@ def host_ride():
             departure_time=departure_time,
             available_seats=available_seats,
             total_fuel_cost=fuel_cost,
+            distance_km=request.form.get('distance_km', 0.0, type=float),
+            vehicle_type=current_user.vehicle_type or 'car',
             notes=notes,
-            status='pending'
+            status='confirmed'   # Auto-confirm — ride is live immediately
         )
         db.session.add(ride)
         db.session.commit()
-        flash('Ride posted successfully! Students can now request to join.', 'success')
+        flash('Ride posted! It is now live — students can request to join.', 'success')
         return redirect(url_for('rides.ride_detail', ride_id=ride.id))
 
     return render_template('rides/host.html', errors=[], form_data={},
