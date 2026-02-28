@@ -13,14 +13,28 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    has_car = db.Column(db.Boolean, default=False)
-    car_model = db.Column(db.String(100))
-    car_number = db.Column(db.String(20))
-    profile_pic = db.Column(db.String(200), default='default.png')
+    # Vehicle info
+    has_vehicle = db.Column(db.Boolean, default=False)
+    vehicle_type = db.Column(db.String(10), default='car')   # 'car' or 'bike'
+    vehicle_model = db.Column(db.String(100))
+    vehicle_number = db.Column(db.String(20))
+    vehicle_capacity = db.Column(db.Integer, default=5)      # 5 or 7 for car, 1 for bike
+    vehicle_mileage = db.Column(db.Float, default=15.0)      # km per litre
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     hosted_rides = db.relationship('Ride', backref='host', lazy=True, foreign_keys='Ride.host_id')
     ride_requests = db.relationship('RideRequest', backref='rider', lazy=True)
+
+    # Keep backward-compatible aliases
+    @property
+    def has_car(self):
+        return self.has_vehicle
+    @property
+    def car_model(self):
+        return self.vehicle_model
+    @property
+    def car_number(self):
+        return self.vehicle_number
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -38,14 +52,15 @@ class Ride(db.Model):
     start_location = db.Column(db.String(300), nullable=False)
     start_lat = db.Column(db.Float)
     start_lng = db.Column(db.Float)
-    destination = db.Column(db.String(300), default='College Campus')
+    destination = db.Column(db.String(300), default='SRM IST Campus')
     dest_lat = db.Column(db.Float)
     dest_lng = db.Column(db.Float)
     departure_time = db.Column(db.DateTime, nullable=False)
     available_seats = db.Column(db.Integer, nullable=False, default=4)
     total_fuel_cost = db.Column(db.Float, default=0.0)
-    status = db.Column(db.String(20), default='pending')  # pending, confirmed, completed, cancelled
-    route_polyline = db.Column(db.Text)
+    distance_km = db.Column(db.Float, default=0.0)           # Calculated from Maps
+    vehicle_type = db.Column(db.String(10), default='car')   # 'car' or 'bike'
+    status = db.Column(db.String(20), default='confirmed')   # confirmed by default now
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -65,7 +80,7 @@ class Ride(db.Model):
 
     @property
     def cost_per_person(self):
-        total_riders = self.seats_taken + 1  # +1 for the host
+        total_riders = self.seats_taken + 1  # +1 for host
         if total_riders > 0 and self.total_fuel_cost > 0:
             return round(self.total_fuel_cost / total_riders, 2)
         return 0.0

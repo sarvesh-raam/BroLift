@@ -3,7 +3,6 @@ from flask_login import login_user, logout_user, login_required, current_user
 import re
 from app import db
 from app.models import User
-from config import Config
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -21,28 +20,39 @@ def register():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm = request.form.get('confirm_password', '')
-        has_car = request.form.get('has_car') == 'on'
-        car_model = request.form.get('car_model', '').strip()
-        car_number = request.form.get('car_number', '').strip()
+        has_vehicle = request.form.get('has_vehicle') == 'on'
+        vehicle_type = request.form.get('vehicle_type', 'car')
+        vehicle_model = request.form.get('vehicle_model', '').strip()
+        vehicle_number = request.form.get('vehicle_number', '').strip()
+        vehicle_capacity = request.form.get('vehicle_capacity', 5, type=int)
+        vehicle_mileage = request.form.get('vehicle_mileage', 15.0, type=float)
 
         errors = []
         if not name:
             errors.append('Name is required.')
         if not email or not is_valid_srm_email(email):
-            errors.append('Only valid SRM IST emails are allowed (e.g. st6546@srmist.edu.in).')
+            errors.append('Only valid SRM IST emails allowed (e.g. st6546@srmist.edu.in).')
         if User.query.filter_by(email=email).first():
             errors.append('Email already registered.')
         if len(password) < 6:
             errors.append('Password must be at least 6 characters.')
         if password != confirm:
             errors.append('Passwords do not match.')
-        if has_car and (not car_model or not car_number):
-            errors.append('Please provide your car model and number.')
+        if has_vehicle and (not vehicle_model or not vehicle_number):
+            errors.append('Please provide your vehicle model and number.')
 
         if errors:
             return render_template('auth/register.html', errors=errors, form_data=request.form)
 
-        user = User(name=name, email=email, has_car=has_car, car_model=car_model, car_number=car_number)
+        user = User(
+            name=name, email=email,
+            has_vehicle=has_vehicle,
+            vehicle_type=vehicle_type,
+            vehicle_model=vehicle_model,
+            vehicle_number=vehicle_number,
+            vehicle_capacity=vehicle_capacity if vehicle_type == 'car' else 1,
+            vehicle_mileage=vehicle_mileage
+        )
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
@@ -80,9 +90,15 @@ def logout():
 def profile():
     if request.method == 'POST':
         current_user.name = request.form.get('name', current_user.name).strip()
-        current_user.has_car = request.form.get('has_car') == 'on'
-        current_user.car_model = request.form.get('car_model', '').strip()
-        current_user.car_number = request.form.get('car_number', '').strip()
+        current_user.has_vehicle = request.form.get('has_vehicle') == 'on'
+        current_user.vehicle_type = request.form.get('vehicle_type', 'car')
+        current_user.vehicle_model = request.form.get('vehicle_model', '').strip()
+        current_user.vehicle_number = request.form.get('vehicle_number', '').strip()
+        current_user.vehicle_mileage = request.form.get('vehicle_mileage', 15.0, type=float)
+        if current_user.vehicle_type == 'car':
+            current_user.vehicle_capacity = request.form.get('vehicle_capacity', 5, type=int)
+        else:
+            current_user.vehicle_capacity = 1
         db.session.commit()
         flash('Profile updated successfully!', 'success')
     return render_template('auth/profile.html')
