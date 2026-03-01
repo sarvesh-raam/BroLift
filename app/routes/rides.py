@@ -7,6 +7,12 @@ from config import Config
 
 rides_bp = Blueprint('rides', __name__)
 
+@rides_bp.route('/api/fuel-prices')
+def fuel_prices_api():
+    """Live fuel prices for Chennai — scraped from goodreturns.in, cached 6h."""
+    from app.utils.fuel_prices import get_fuel_prices
+    return jsonify(get_fuel_prices())
+
 @rides_bp.route('/host', methods=['GET', 'POST'])
 @login_required
 def host_ride():

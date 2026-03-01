@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Host a Ride — BroLift{% endblock %}
 {% block extra_head %}
+<!-- Flatpickr beautiful date picker -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-    // Load maps with error handling — no dependencies on Places API for the route map
+    window.gm_authFailure = function () { document.getElementById('map-error').style.display = 'block'; }
     function loadMapsScript() {
         var s = document.createElement('script');
         s.src = 'https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initHostMap';
@@ -10,7 +13,6 @@
         s.onerror = function () { document.getElementById('map-error').style.display = 'block'; };
         document.head.appendChild(s);
     }
-    window.gm_authFailure = function () { document.getElementById('map-error').style.display = 'block'; };
     window.addEventListener('load', loadMapsScript);
 </script>
 {% endblock %}
@@ -24,21 +26,19 @@
     <div class="host-layout">
         <div class="host-form-col">
             {% if errors %}
-            <div class="error-list">
-                {% for e in errors %}<div class="error-item">{{ e }}</div>{% endfor %}
-            </div>
+            <div class="error-list">{% for e in errors %}<div class="error-item">{{ e }}</div>{% endfor %}</div>
             {% endif %}
 
             <form method="POST" id="host-form" class="app-form">
 
-                <!-- Route Section -->
+                <!-- Route -->
                 <div class="form-section-label">Route</div>
                 <div class="route-input-card">
                     <div class="route-input-row">
                         <span class="route-dot green-dot-sm"></span>
-                        <input type="text" id="start_location" name="start_location" placeholder="Start location..."
-                            value="{{ form_data.get('start_location', '') }}" required autocomplete="off"
-                            class="route-input">
+                        <input type="text" id="start_location" name="start_location"
+                            placeholder="Your starting location..." value="{{ form_data.get('start_location', '') }}"
+                            required autocomplete="off" class="route-input">
                         <input type="hidden" id="start_lat" name="start_lat">
                         <input type="hidden" id="start_lng" name="start_lng">
                         <input type="hidden" id="distance_km" name="distance_km" value="0">
@@ -46,27 +46,29 @@
                     <div class="route-divider-line"></div>
                     <div class="route-input-row">
                         <span class="route-dot blue-dot-sm"></span>
-                        <input type="text" value="{{ college_name }}" readonly class="route-input" style="opacity:0.6">
+                        <input type="text" value="{{ college_name }}" readonly class="route-input" style="opacity:0.55">
                         <input type="hidden" name="destination" value="{{ college_name }}">
-                        <input type="hidden" id="dest_lat" name="dest_lat" value="{{ college_lat }}">
-                        <input type="hidden" id="dest_lng" name="dest_lng" value="{{ college_lng }}">
+                        <input type="hidden" name="dest_lat" value="{{ college_lat }}">
+                        <input type="hidden" name="dest_lng" value="{{ college_lng }}">
                     </div>
                 </div>
-                <div id="dist-badge" class="dist-badge" style="display:none">
-                    <span id="dist-text"></span>
-                </div>
+                <div id="dist-badge" class="dist-badge" style="display:none"><span id="dist-text"></span></div>
 
                 <!-- Time & Seats -->
-                <div class="form-section-label">Trip Details</div>
+                <div class="form-section-label">When & Seats</div>
                 <div class="app-form-row">
                     <div class="app-form-group">
                         <label>Departure Time</label>
-                        <input type="datetime-local" id="departure_time" name="departure_time"
+                        <!-- Hidden actual input for form submission -->
+                        <input type="hidden" id="departure_time" name="departure_time"
                             value="{{ form_data.get('departure_time', '') }}" required>
+                        <!-- Beautiful visible input for Flatpickr -->
+                        <input type="text" id="departure_display" placeholder="Pick date & time" class="flatpickr-input"
+                            readonly>
                     </div>
                     <div class="app-form-group">
                         <label>Seats to Offer</label>
-                        <select id="available_seats" name="available_seats" required>
+                        <select id="available_seats" name="available_seats">
                             {% set vtype = current_user.vehicle_type or 'car' %}
                             {% set vcap = current_user.vehicle_capacity or 5 %}
                             {% if vtype == 'bike' %}
@@ -81,13 +83,17 @@
                             {% endif %}
                         </select>
                         <span class="form-hint">
-                            {% if vtype == 'bike' %}Bike — 1 seat{% else %}{{ vcap }}-seater{% endif %}
+                            {% if vtype == 'bike' %}Bike — 1 pillion{% else %}{{ vcap }}-seater car{% endif %}
                         </span>
                     </div>
                 </div>
 
-                <!-- Fuel Section -->
-                <div class="form-section-label">Fuel Cost</div>
+                <!-- Fuel Type -->
+                <div class="form-section-label">Fuel Type
+                    <span id="price-loading"
+                        style="font-size:0.65rem;color:var(--text-muted);margin-left:.5rem">Fetching live
+                        prices...</span>
+                </div>
                 <div class="fuel-type-card">
                     <div class="fuel-type-grid">
                         {% for ft, label, icon in
@@ -98,11 +104,14 @@
                                 or 'petrol' )==ft %}checked{% endif %} onchange="onFuelTypeChange()">
                             <span class="fuel-icon">{{ icon }}</span>
                             <span class="fuel-label">{{ label }}</span>
-                            <span class="fuel-price" id="price-{{ ft }}"></span>
+                            <span class="fuel-price" id="chip-price-{{ ft }}">...</span>
                         </label>
                         {% endfor %}
                     </div>
+                    <div id="price-source" class="price-source-tag"></div>
                 </div>
+
+                <!-- Cost -->
                 <div class="app-form-row">
                     <div class="app-form-group">
                         <label>Your Mileage</label>
@@ -117,25 +126,19 @@
                     </div>
                 </div>
 
-                <!-- Cost Summary Card -->
+                <!-- Cost Summary -->
                 <div class="cost-card" id="cost-card" style="display:none">
-                    <div class="cost-card-row">
-                        <span>Distance</span><strong id="cc-dist">—</strong>
-                    </div>
-                    <div class="cost-card-row">
-                        <span>Total Fuel</span><strong id="cc-fuel">—</strong>
-                    </div>
-                    <div class="cost-card-row cost-highlight">
-                        <span>Per Person Share</span>
-                        <strong id="cc-per-person">—</strong>
-                    </div>
+                    <div class="cost-card-row"><span>Distance</span><strong id="cc-dist">—</strong></div>
+                    <div class="cost-card-row"><span>Total Fuel</span><strong id="cc-fuel">—</strong></div>
+                    <div class="cost-card-row cost-highlight"><span>Each Person Pays</span><strong
+                            id="cc-per-person">—</strong></div>
                     <div class="cost-card-note" id="cc-note"></div>
                 </div>
 
                 <div class="app-form-group">
                     <label>Notes (Optional)</label>
                     <textarea name="notes" rows="2"
-                        placeholder="e.g. Pickup from main road only...">{{ form_data.get('notes', '') }}</textarea>
+                        placeholder="e.g. Main road pickup only, no Gents...">{{ form_data.get('notes', '') }}</textarea>
                 </div>
 
                 <button type="submit" class="app-btn-primary">Post Ride — Go Live</button>
@@ -146,8 +149,8 @@
             <div class="map-card">
                 <div class="map-label">Route Preview</div>
                 <div id="map-error" class="map-error-msg" style="display:none">
-                    Maps not available. <a href="https://console.cloud.google.com/apis/library" target="_blank">Enable
-                        Maps API</a>
+                    Map unavailable. <a href="https://console.cloud.google.com/apis/library" target="_blank">Enable Maps
+                        API</a>
                 </div>
                 <div id="host-map" class="google-map"></div>
                 <div class="map-legend">
@@ -166,23 +169,57 @@
     var COLLEGE_LNG = {{ college_lng }};
     var MILEAGE = {{ current_user.vehicle_mileage or 15 }};
 
-    // Fuel prices (Chennai, Feb 2026)
-    var FUEL_DATA = {
-        petrol: { price: 102.63, unit: '/L', label: '₹102.63/L' },
-        diesel: { price: 88.74, unit: '/L', label: '₹88.74/L' },
-        cng: { price: 72.00, unit: '/kg', label: '₹72/kg' },
-        electric: { price: 0, unit: '', label: '₹1.5/km' }
-    };
+    // Fuel prices — start with fallback, update from live API
+    var FUEL_PRICES = { petrol: 102.63, diesel: 88.74, cng: 72.00, electric_per_km: 1.50 };
 
-    // Show current prices on load
-    Object.keys(FUEL_DATA).forEach(function (ft) {
-        var el = document.getElementById('price-' + ft);
-        if (el) el.textContent = FUEL_DATA[ft].label;
+    // ── Flatpickr date picker setup ──
+    var fp = flatpickr('#departure_display', {
+        enableTime: true,
+        dateFormat: 'Y-m-dTH:i',
+        altInput: false,
+        minDate: 'today',
+        minuteIncrement: 5,
+        theme: 'dark',
+        disableMobile: false,
+        onChange: function (selectedDates, dateStr) {
+            document.getElementById('departure_time').value = dateStr;
+        }
     });
+
+    // ── Live fuel prices ──
+    fetch('/api/fuel-prices')
+        .then(r => r.json())
+        .then(data => {
+            FUEL_PRICES.petrol = data.petrol;
+            FUEL_PRICES.diesel = data.diesel;
+            FUEL_PRICES.cng = data.cng;
+            FUEL_PRICES.electric_per_km = data.electric_per_km || 1.5;
+
+            // Update chip labels
+            document.getElementById('chip-price-petrol').textContent = '₹' + data.petrol + '/L';
+            document.getElementById('chip-price-diesel').textContent = '₹' + data.diesel + '/L';
+            document.getElementById('chip-price-cng').textContent = '₹' + data.cng + '/kg';
+            document.getElementById('chip-price-electric').textContent = '₹1.5/km';
+
+            var src = data.meta && data.meta.source ? data.meta.source : '';
+            var updated = data.meta && data.meta.last_updated ? data.meta.last_updated : '';
+            document.getElementById('price-source').textContent = src + (updated ? ' · ' + updated : '');
+            document.getElementById('price-loading').style.display = 'none';
+
+            // Recalculate if distance already set
+            var dist = parseFloat(document.getElementById('distance_km').value);
+            if (dist) calcFuelCost(dist);
+        })
+        .catch(function () {
+            document.getElementById('price-loading').textContent = 'Using default rates';
+            document.getElementById('chip-price-petrol').textContent = '₹102.63/L';
+            document.getElementById('chip-price-diesel').textContent = '₹88.74/L';
+            document.getElementById('chip-price-cng').textContent = '₹72/kg';
+            document.getElementById('chip-price-electric').textContent = '₹1.5/km';
+        });
 
     var darkMapStyle = [
         { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
-        { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1a2e' }] },
         { elementType: 'labels.text.fill', stylers: [{ color: '#9ca3af' }] },
         { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2d3561' }] },
         { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f3460' }] },
@@ -193,13 +230,11 @@
         directionsService = new google.maps.DirectionsService();
         directionsRenderer = new google.maps.DirectionsRenderer();
         map = new google.maps.Map(document.getElementById('host-map'), {
-            center: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-            zoom: 12, styles: darkMapStyle
+            center: { lat: COLLEGE_LAT, lng: COLLEGE_LNG }, zoom: 11, styles: darkMapStyle
         });
         directionsRenderer.setMap(map);
         new google.maps.Marker({
-            position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-            map: map, title: 'SRM IST Campus',
+            position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG }, map: map,
             icon: { url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }
         });
         var ac = new google.maps.places.Autocomplete(
@@ -222,14 +257,13 @@
             destination: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
             travelMode: google.maps.TravelMode.DRIVING
         }, function (result, status) {
-            if (status === 'OK') {
-                directionsRenderer.setDirections(result);
-                var distKm = parseFloat((result.routes[0].legs[0].distance.value / 1000).toFixed(1));
-                document.getElementById('distance_km').value = distKm;
-                document.getElementById('dist-badge').style.display = 'flex';
-                document.getElementById('dist-text').textContent = distKm + ' km to SRM IST';
-                calcFuelCost(distKm);
-            }
+            if (status !== 'OK') return;
+            directionsRenderer.setDirections(result);
+            var distKm = parseFloat((result.routes[0].legs[0].distance.value / 1000).toFixed(1));
+            document.getElementById('distance_km').value = distKm;
+            document.getElementById('dist-badge').style.display = 'flex';
+            document.getElementById('dist-text').textContent = distKm + ' km to SRM IST via roads';
+            calcFuelCost(distKm);
         });
     }
 
@@ -240,13 +274,9 @@
 
     function calcFuelCost(distKm) {
         var ft = getFuelType();
-        var cost = 0;
-        if (ft === 'electric') {
-            cost = Math.ceil(distKm * 1.5);   // Rs.1.5/km
-        } else {
-            var pricePerUnit = FUEL_DATA[ft].price;
-            cost = Math.ceil((distKm / MILEAGE) * pricePerUnit);
-        }
+        var cost = ft === 'electric'
+            ? Math.ceil(distKm * FUEL_PRICES.electric_per_km)
+            : Math.ceil((distKm / MILEAGE) * FUEL_PRICES[ft]);
         document.getElementById('fuel_cost').value = cost;
         updateCostCard(distKm, cost);
     }
@@ -255,23 +285,20 @@
         var seats = parseInt(document.getElementById('available_seats').value) || 1;
         fuelCost = parseFloat(fuelCost) || 0;
         if (!fuelCost) { document.getElementById('cost-card').style.display = 'none'; return; }
-        var perPerson = (fuelCost / (seats + 1)).toFixed(0);
-        document.getElementById('cc-dist').textContent = (distKm || '—') + (distKm ? ' km' : '');
+        var perPerson = Math.ceil(fuelCost / (seats + 1));
+        document.getElementById('cc-dist').textContent = distKm ? distKm + ' km' : '—';
         document.getElementById('cc-fuel').textContent = 'Rs.' + fuelCost;
         document.getElementById('cc-per-person').textContent = 'Rs.' + perPerson;
-        document.getElementById('cc-note').textContent = 'Split between you + ' + seats + ' passenger' + (seats > 1 ? 's' : '');
+        document.getElementById('cc-note').textContent = 'Split: you + ' + seats + ' passenger' + (seats > 1 ? 's' : '');
         document.getElementById('cost-card').style.display = 'block';
     }
 
     function onFuelTypeChange() {
+        document.querySelectorAll('.fuel-chip').forEach(function (c) { c.classList.remove('active'); });
+        var sel = document.querySelector('input[name="fuel_type"]:checked');
+        if (sel) sel.closest('.fuel-chip').classList.add('active');
         var dist = parseFloat(document.getElementById('distance_km').value);
         if (dist) calcFuelCost(dist);
-        // Update fuel chip UI
-        document.querySelectorAll('.fuel-chip').forEach(function (chip) {
-            chip.classList.remove('active');
-        });
-        var selected = document.querySelector('input[name="fuel_type"]:checked');
-        if (selected) selected.closest('.fuel-chip').classList.add('active');
     }
 
     document.getElementById('available_seats').addEventListener('change', function () {

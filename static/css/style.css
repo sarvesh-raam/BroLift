@@ -2456,3 +2456,21 @@ button {
 .flash-warning { background: rgba(251,191,36,0.15);  border: 1px solid rgba(251,191,36,0.3);  color: var(--accent-yellow); }
 .flash-info    { background: rgba(99,102,241,0.15);  border: 1px solid var(--border-bright); color: var(--accent-light); }
 .flash button  { background: none; border: none; cursor: pointer; color: inherit; font-size: 1rem; padding: 0; opacity: 0.7; }
+
+/* === Flatpickr overrides (dark theme) === */
+.flatpickr-calendar { background: var(--bg-card) !important; border: 1px solid var(--border-bright) !important; border-radius: var(--radius) !important; box-shadow: var(--shadow), var(--shadow-glow) !important; font-family: var(--font) !important; }
+.flatpickr-day { border-radius: var(--radius-xs) !important; color: var(--text-secondary) !important; }
+.flatpickr-day.selected, .flatpickr-day.selected:hover { background: var(--accent) !important; border-color: var(--accent) !important; color: white !important; }
+.flatpickr-day:hover { background: rgba(99,102,241,0.15) !important; color: var(--text-primary) !important; }
+.flatpickr-day.today { border-color: var(--accent-light) !important; }
+.flatpickr-months .flatpickr-month { color: var(--text-primary) !important; fill: var(--text-primary) !important; }
+.flatpickr-current-month select, .flatpickr-current-month input { color: var(--text-primary) !important; }
+.flatpickr-weekday { color: var(--text-muted) !important; }
+.flatpickr-time input { color: var(--text-primary) !important; background: transparent !important; }
+.flatpickr-time .flatpickr-am-pm { color: var(--accent-light) !important; }
+.flatpickr-months .flatpickr-prev-month svg, .flatpickr-months .flatpickr-next-month svg { fill: var(--text-secondary) !important; }
+.flatpickr-input[readonly] { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.75rem 1rem; color: var(--text-primary); font-size: 0.925rem; cursor: pointer; width: 100%; outline: none; transition: var(--transition); }
+.flatpickr-input[readonly]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+/* === Live price source tag === */
+.price-source-tag { font-size: 0.68rem; color: var(--text-muted); text-align: right; margin-top: 0.4rem; font-style: italic; }
