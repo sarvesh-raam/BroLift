@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for
 from flask_login import login_required, current_user
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.models import Ride, RideRequest
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -38,4 +38,5 @@ def index():
     }
 
     return render_template('dashboard/index.html', hosted_rides=hosted_rides,
-                           my_requests=my_requests, upcoming=upcoming, stats=stats)
+                           my_requests=my_requests, upcoming=upcoming, stats=stats,
+                           now=datetime.now())
