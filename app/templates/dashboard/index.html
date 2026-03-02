@@ -1,135 +1,133 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — BroLift{% endblock %}
+{% block title %}BroLift — Home{% endblock %}
 {% block content %}
-<div class="dashboard-page">
-    <div class="dashboard-header">
-        <div class="welcome-text">
-            <h1>Hey, {{ current_user.name.split()[0] }}!</h1>
-            <p>Here's your ride overview.</p>
+<div class="home-screen">
+
+    <!-- Greeting -->
+    <div class="home-greeting">
+        <div>
+            <p class="greeting-sub">{{ now.strftime('%A, %d %B') }}</p>
+            <h1 class="greeting-name">Hey, {{ current_user.name.split()[0] }}!</h1>
         </div>
-        <div class="dashboard-actions">
-            {% if current_user.has_car %}
-            <a href="{{ url_for('rides.host_ride') }}" class="btn-primary">Host a Ride</a>
-            {% endif %}
-            <a href="{{ url_for('rides.find_ride') }}" class="btn-secondary">Find a Ride</a>
+        <a href="{{ url_for('auth.profile') }}" class="home-avatar">
+            {{ current_user.name[0].upper() }}
+        </a>
+    </div>
+
+    <!-- Active ride banner (if any) -->
+    {% set active = hosted_rides | selectattr('status','equalto','confirmed') | list %}
+    {% set my_rides = my_requests | selectattr('status','equalto','confirmed') | list %}
+    {% if active %}
+    <a href="{{ url_for('rides.ride_detail', ride_id=active[0].id) }}" class="active-ride-banner">
+        <div class="active-ride-icon">🚗</div>
+        <div class="active-ride-info">
+            <div class="active-ride-title">Your ride is live!</div>
+            <div class="active-ride-sub">{{ active[0].departure_time.strftime('%d %b · %I:%M %p') }} · {{
+                active[0].seats_available }} seat(s) left</div>
+        </div>
+        <span class="active-ride-arrow">›</span>
+    </a>
+    {% elif my_rides %}
+    <a href="{{ url_for('rides.ride_detail', ride_id=my_rides[0].ride_id) }}"
+        class="active-ride-banner confirmed-banner">
+        <div class="active-ride-icon">✅</div>
+        <div class="active-ride-info">
+            <div class="active-ride-title">Ride confirmed!</div>
+            <div class="active-ride-sub">{{ my_rides[0].ride.departure_time.strftime('%d %b · %I:%M %p') }} — Tap to
+                view</div>
+        </div>
+        <span class="active-ride-arrow">›</span>
+    </a>
+    {% endif %}
+
+    <!-- Main Actions -->
+    <div class="action-cards">
+        <a href="{{ url_for('rides.find_ride') }}" class="action-card find-card">
+            <div class="action-icon">🔍</div>
+            <div class="action-text">
+                <div class="action-title">Find a Ride</div>
+                <div class="action-sub">Browse rides to SRM IST</div>
+            </div>
+            <div class="action-arrow">›</div>
+        </a>
+        {% if current_user.has_vehicle %}
+        <a href="{{ url_for('rides.host_ride') }}" class="action-card host-card">
+            <div class="action-icon">🚘</div>
+            <div class="action-text">
+                <div class="action-title">Offer a Ride</div>
+                <div class="action-sub">Share your commute &amp; split fuel</div>
+            </div>
+            <div class="action-arrow">›</div>
+        </a>
+        {% else %}
+        <a href="{{ url_for('auth.profile') }}" class="action-card host-card muted-card">
+            <div class="action-icon">🚘</div>
+            <div class="action-text">
+                <div class="action-title">Offer a Ride</div>
+                <div class="action-sub">Add your vehicle in Profile to host</div>
+            </div>
+            <div class="action-arrow">›</div>
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Stats Row -->
+    <div class="quick-stats">
+        <div class="qstat">
+            <div class="qstat-val">{{ hosted_rides | length }}</div>
+            <div class="qstat-label">Rides Hosted</div>
+        </div>
+        <div class="qstat-div"></div>
+        <div class="qstat">
+            <div class="qstat-val">{{ my_requests | length }}</div>
+            <div class="qstat-label">Rides Taken</div>
+        </div>
+        <div class="qstat-div"></div>
+        <div class="qstat">
+            <div class="qstat-val green">Live</div>
+            <div class="qstat-label">SRM IST Only</div>
         </div>
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon-box">Car</div>
-            <div class="stat-info">
-                <div class="stat-value">{{ stats.rides_hosted }}</div>
-                <div class="stat-label">Rides Hosted</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon-box">Join</div>
-            <div class="stat-info">
-                <div class="stat-value">{{ stats.rides_joined }}</div>
-                <div class="stat-label">Rides Joined</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon-box">Wait</div>
-            <div class="stat-info">
-                <div class="stat-value">{{ stats.pending_requests }}</div>
-                <div class="stat-label">Pending Requests</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon-box">Eco</div>
-            <div class="stat-info">
-                <div class="stat-value">{{ stats.rides_hosted + stats.rides_joined }}</div>
-                <div class="stat-label">Eco Trips</div>
-            </div>
-        </div>
-    </div>
+    <!-- My Upcoming Rides -->
+    {% if hosted_rides or my_requests %}
+    <div class="home-section-title">Your Rides</div>
 
-    {% if upcoming %}
-    <div class="dashboard-section">
-        <h2 class="section-heading">Upcoming Rides</h2>
-        <div class="rides-list">
-            {% for item in upcoming %}
-            {% set ride = item.ride %}
-            <div class="ride-card {% if item.type == 'host' %}ride-host{% else %}ride-passenger{% endif %}">
-                <div class="ride-card-badge">{{ 'Hosting' if item.type == 'host' else 'Passenger' }}</div>
-                <div class="ride-card-body">
-                    <div class="ride-route">
-                        <div class="route-from">{{ ride.start_location[:40] }}</div>
-                        <div class="route-arrow">to</div>
-                        <div class="route-to">{{ ride.destination }}</div>
-                    </div>
-                    <div class="ride-meta">
-                        <span class="meta-item">{{ ride.departure_time.strftime('%d %b, %I:%M %p') }}</span>
-                        <span class="meta-item">{{ ride.seats_available }} seats left</span>
-                        <span class="meta-item">Rs.{{ ride.cost_per_person }}/person</span>
-                        <span class="ride-badge status-{{ ride.status }}">{{ ride.status.upper() }}</span>
-                    </div>
-                </div>
-                <a href="{{ url_for('rides.ride_detail', ride_id=ride.id) }}" class="ride-card-link">View</a>
+    {% for ride in hosted_rides[:3] %}
+    <a href="{{ url_for('rides.ride_detail', ride_id=ride.id) }}" class="ride-row">
+        <div class="ride-row-left">
+            <div class="ride-row-icon host-icon">H</div>
+            <div>
+                <div class="ride-row-title">{{ ride.start_location | truncate(30, True, '…') }}</div>
+                <div class="ride-row-meta">{{ ride.departure_time.strftime('%d %b · %I:%M %p') }} · {{
+                    ride.seats_available }} seat(s) left</div>
             </div>
-            {% endfor %}
         </div>
+        <span class="ride-row-badge status-{{ ride.status }}">{{ ride.status }}</span>
+    </a>
+    {% endfor %}
+
+    {% for req in my_requests[:3] %}
+    <a href="{{ url_for('rides.ride_detail', ride_id=req.ride_id) }}" class="ride-row">
+        <div class="ride-row-left">
+            <div class="ride-row-icon rider-icon">R</div>
+            <div>
+                <div class="ride-row-title">{{ req.ride.start_location | truncate(30, True, '…') }}</div>
+                <div class="ride-row-meta">{{ req.ride.departure_time.strftime('%d %b · %I:%M %p') }} · Rs.{{
+                    req.ride.cost_per_person }}</div>
+            </div>
+        </div>
+        <span class="ride-row-badge status-{{ req.status }}">{{ req.status }}</span>
+    </a>
+    {% endfor %}
+
+    {% else %}
+    <div class="empty-home">
+        <div class="empty-icon">🛣️</div>
+        <div class="empty-title">No rides yet</div>
+        <div class="empty-sub">Tap "Find a Ride" to get started</div>
     </div>
     {% endif %}
 
-    <div class="dashboard-two-col">
-        <div class="dashboard-section">
-            <h2 class="section-heading">My Hosted Rides</h2>
-            {% if hosted_rides %}
-            <div class="rides-list-compact">
-                {% for ride in hosted_rides %}
-                <div class="ride-item">
-                    <div class="ride-item-info">
-                        <div class="ride-item-route">{{ ride.start_location[:30] }} to {{ ride.destination[:20] }}</div>
-                        <div class="ride-item-time">{{ ride.departure_time.strftime('%d %b, %I:%M %p') }}</div>
-                    </div>
-                    <div class="ride-item-right">
-                        <span class="ride-badge status-{{ ride.status }}">{{ ride.status }}</span>
-                        <a href="{{ url_for('rides.ride_detail', ride_id=ride.id) }}" class="link-arrow">View</a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <div class="empty-icon-text">No rides yet</div>
-                <p>No hosted rides yet.</p>
-                {% if current_user.has_car %}
-                <a href="{{ url_for('rides.host_ride') }}" class="btn-primary btn-sm">Host Your First Ride</a>
-                {% else %}
-                <a href="{{ url_for('auth.profile') }}" class="btn-secondary btn-sm">Add Your Car</a>
-                {% endif %}
-            </div>
-            {% endif %}
-        </div>
-
-        <div class="dashboard-section">
-            <h2 class="section-heading">My Ride Requests</h2>
-            {% if my_requests %}
-            <div class="rides-list-compact">
-                {% for req in my_requests %}
-                <div class="ride-item">
-                    <div class="ride-item-info">
-                        <div class="ride-item-route">{{ req.ride.start_location[:30] }} to SRM IST</div>
-                        <div class="ride-item-time">{{ req.ride.departure_time.strftime('%d %b, %I:%M %p') }}</div>
-                    </div>
-                    <div class="ride-item-right">
-                        <span class="ride-badge status-{{ req.status }}">{{ req.status }}</span>
-                        <a href="{{ url_for('rides.ride_detail', ride_id=req.ride_id) }}" class="link-arrow">View</a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <div class="empty-icon-text">No requests yet</div>
-                <p>No ride requests yet.</p>
-                <a href="{{ url_for('rides.find_ride') }}" class="btn-secondary btn-sm">Find a Ride</a>
-            </div>
-            {% endif %}
-        </div>
-    </div>
 </div>
 {% endblock %}

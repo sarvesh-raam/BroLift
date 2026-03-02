@@ -139,11 +139,15 @@ def find_ride():
         'label': r.host.name + ' - ' + r.departure_time.strftime('%I:%M %p')
     } for r in rides])
 
+    from datetime import date as _date
+    _today = _date.today()
     return render_template('rides/find.html', rides=rides, search_data=search_data,
                            rides_json=rides_json,
                            maps_key=Config.GOOGLE_MAPS_API_KEY,
                            college_lat=Config.COLLEGE_LOCATION['lat'],
-                           college_lng=Config.COLLEGE_LOCATION['lng'])
+                           college_lng=Config.COLLEGE_LOCATION['lng'],
+                           today=_today.strftime('%Y-%m-%d'),
+                           tomorrow=(_today + timedelta(days=1)).strftime('%Y-%m-%d'))
 
 @rides_bp.route('/ride/<int:ride_id>')
 @login_required
