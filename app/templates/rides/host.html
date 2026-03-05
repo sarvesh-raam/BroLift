@@ -51,56 +51,75 @@
                 <input type="hidden" name="destination" value="{{ college_name }}">
             </div>
 
-            <div style="display: flex; gap: 12px;">
+            <div style="display: flex; gap: 12px; margin-bottom: 20px;">
                 <div class="form-group" style="flex: 2;">
                     <label>Departure Time</label>
                     <input type="text" id="departure_display" placeholder="Pick date & time" required>
                     <input type="hidden" id="departure_time" name="departure_time"
                         value="{{ form_data.get('departure_time', '') }}">
                 </div>
-                <div class="form-group" style="flex: 1;">
-                    <label>Seats</label>
-                    <select id="available_seats" name="available_seats">
+                <div class="form-group" style="flex: 2;">
+                    <label>Seats Available</label>
+                    <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
                         {% set vcap = current_user.vehicle_capacity or 5 %}
                         {% for i in range(1, vcap) %}
-                        <option value="{{ i }}" {% if form_data.get('available_seats')==i|string %}selected{% endif %}>
-                            {{ i }}</option>
+                        <label style="cursor: pointer;">
+                            <input type="radio" name="available_seats" value="{{ i }}" style="display: none;" {% if
+                                (form_data.get('available_seats')|int==i) or (not form_data.get('available_seats') and
+                                i==1) %}checked{% endif %} onchange="updateCost()">
+                            <div class="chip-ui"
+                                style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 14px; transition: 0.2s;">
+                                {{ i }}</div>
+                        </label>
                         {% endfor %}
-                    </select>
+                    </div>
                 </div>
             </div>
 
             <!-- Route Preview Map -->
             <div id="host-map"
-                style="width: 100%; height: 200px; border-radius: var(--radius-md); margin-top: 16px; background: #f0f0f0; border: 1px solid var(--border); overflow: hidden;">
+                style="width: 100%; height: 320px; border-radius: var(--radius-md); margin-top: 8px; background: #f0f0f0; border: 1px solid var(--border); overflow: hidden;">
             </div>
         </div>
 
         <div class="card">
             <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--primary);">Fuel & Cost</h3>
 
-            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
-                <div class="form-group" style="flex: 1;">
+            <div style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 24px;">
+                <div class="form-group">
                     <label>Fuel Type</label>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
                         {% for ft, label in [('petrol','Petrol'),('diesel','Diesel'),('cng','CNG'),('electric','EV')] %}
-                        <label style="flex: 1; min-width: 60px; cursor: pointer;">
+                        <label style="flex: 1; min-width: 80px; cursor: pointer;">
                             <input type="radio" name="fuel_type" value="{{ ft }}" style="display: none;" {% if
                                 (current_user.fuel_type or 'petrol' )==ft %}checked{% endif %}
                                 onchange="updateFuelUI(this)">
-                            <div class="fuel-chip-ui"
-                                style="text-align: center; border: 1px solid var(--border); padding: 8px; border-radius: var(--radius-md); font-size: 12px; transition: 0.2s;">
+                            <div class="chip-ui"
+                                style="text-align: center; border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-md); font-size: 13px; transition: 0.2s;">
                                 {{ label }}</div>
                         </label>
                         {% endfor %}
                     </div>
                 </div>
-                <div class="form-group" style="flex: 1;">
+
+                <div class="form-group">
                     <label>Passenger Preference</label>
-                    <select name="passenger_preference" style="margin-top: 8px;">
-                        <option value="any">Everyone</option>
-                        <option value="female_only">Girls Only</option>
-                    </select>
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <label style="flex: 1; cursor: pointer;">
+                            <input type="radio" name="passenger_preference" value="any" style="display: none;" checked
+                                onchange="updateCost()">
+                            <div class="chip-ui"
+                                style="text-align: center; border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-md); font-size: 13px;">
+                                Everyone</div>
+                        </label>
+                        <label style="flex: 1; cursor: pointer;">
+                            <input type="radio" name="passenger_preference" value="female_only" style="display: none;"
+                                onchange="updateCost()">
+                            <div class="chip-ui"
+                                style="text-align: center; border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-md); font-size: 13px;">
+                                Girls Only</div>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -108,7 +127,8 @@
                 <div class="form-group" style="flex: 1;">
                     <label>Total Est. Cost (₹)</label>
                     <input type="number" id="fuel_cost" name="fuel_cost" placeholder="Calculating..."
-                        value="{{ form_data.get('fuel_cost', '') }}">
+                        value="{{ form_data.get('fuel_cost', '') }}"
+                        style="font-size: 16px; font-weight: 500; color: var(--primary);">
                 </div>
                 <div style="flex: 1; padding-bottom: 20px; font-size: 13px; color: var(--text-secondary);">
                     Split cost will be shown to riders automatically.
@@ -117,21 +137,28 @@
         </div>
 
         <div class="form-group">
-            <textarea name="notes" rows="2" placeholder="Ride notes (optional, e.g. Pickup at main gate)"
-                style="border-radius: var(--radius-md);">{{ form_data.get('notes', '') }}</textarea>
+            <textarea name="notes" rows="3" placeholder="Ride notes (optional, e.g. Pickup at main gate)"
+                style="border-radius: var(--radius-md); padding: 12px; border: 1px solid var(--border); resize: none; font-family: inherit;">{{ form_data.get('notes', '') }}</textarea>
         </div>
 
-        <button type="submit" class="btn-form-submit" style="height: 48px; border-radius: var(--radius-full);">Post
+        <button type="submit" class="btn-form-submit"
+            style="height: 52px; border-radius: var(--radius-full); font-weight: 500; font-size: 16px; margin-top: 8px;">Post
             Ride</button>
     </form>
 </div>
 
 <style>
-    input:checked+.fuel-chip-ui {
+    input:checked+.chip-ui {
         background: var(--primary-light);
         border-color: var(--primary) !important;
         color: var(--primary);
         font-weight: 500;
+        box-shadow: 0 2px 4px rgba(26, 115, 232, 0.1);
+    }
+
+    .chip-ui:hover {
+        border-color: var(--primary-light);
+        background: #f8fbff;
     }
 </style>
 
@@ -151,6 +178,7 @@
 
     var map;
     var directionsRenderer;
+    var marker;
 
     function initHostMap() {
         const mapDiv = document.getElementById('host-map');
@@ -159,7 +187,8 @@
         map = new google.maps.Map(mapDiv, {
             center: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
             zoom: 14,
-            disableDefaultUI: true
+            disableDefaultUI: true,
+            gestureHandling: 'greedy'
         });
 
         directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
@@ -170,14 +199,41 @@
         ac.addListener('place_changed', function () {
             var place = ac.getPlace();
             if (place.geometry) {
-                document.getElementById('start_lat').value = place.geometry.location.lat();
-                document.getElementById('start_lng').value = place.geometry.location.lng();
-                calculateDistance(place.geometry.location);
+                updateLocationAndDistance(place.geometry.location);
             }
+        });
+
+        // Add click listener to map
+        map.addListener('click', function (e) {
+            updateLocationAndDistance(e.latLng, true);
         });
     }
 
+    function updateLocationAndDistance(latLng, reverseGeocode = false) {
+        document.getElementById('start_lat').value = latLng.lat();
+        document.getElementById('start_lng').value = latLng.lng();
+
+        if (marker) marker.setMap(null);
+        marker = new google.maps.Marker({
+            position: latLng,
+            map: map,
+            icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+        });
+
+        calculateDistance(latLng);
+
+        if (reverseGeocode) {
+            var geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ location: latLng }, function (results, status) {
+                if (status === 'OK' && results[0]) {
+                    document.getElementById('start_location').value = results[0].formatted_address;
+                }
+            });
+        }
+    }
+
     function calculateDistance(origin) {
+        console.log('Calculating distance from:', origin.toString());
         var service = new google.maps.DistanceMatrixService();
         service.getDistanceMatrix({
             origins: [origin],
@@ -188,6 +244,7 @@
                 var element = response.rows[0].elements[0];
                 if (element.status === 'OK') {
                     var dist = element.distance.value / 1000;
+                    console.log('Distance found:', dist, 'km');
                     document.getElementById('distance_km').value = dist.toFixed(1);
                     updateCost();
 
@@ -199,7 +256,11 @@
                     }, function (res, stat) {
                         if (stat === 'OK') directionsRenderer.setDirections(res);
                     });
+                } else {
+                    console.error('DistanceMatrix element status:', element.status);
                 }
+            } else {
+                console.error('DistanceMatrix status:', status);
             }
         });
     }
@@ -208,16 +269,32 @@
         var distInput = document.getElementById('distance_km');
         if (!distInput) return;
         var dist = parseFloat(distInput.value) || 0;
+
         var ftEl = document.querySelector('input[name="fuel_type"]:checked');
         var ft = ftEl ? ftEl.value : 'petrol';
+
+        console.log('Updating cost for dist:', dist, 'fuel:', ft);
+
         var cost = 0;
         if (ft === 'electric') cost = dist * 2;
         else cost = (dist / MILEAGE) * FUEL_PRICES[ft];
 
         const costInput = document.getElementById('fuel_cost');
-        if (costInput) costInput.value = Math.ceil(cost);
+        if (costInput) {
+            costInput.value = Math.ceil(cost);
+            console.log('Calculated cost:', costInput.value);
+        }
     }
 
     function updateFuelUI(el) { updateCost(); }
+
+    // Auto-calculate on load if values exist
+    window.addEventListener('load', function () {
+        const lat = parseFloat(document.getElementById('start_lat').value);
+        const lng = parseFloat(document.getElementById('start_lng').value);
+        if (lat && lng) {
+            updateLocationAndDistance(new google.maps.LatLng(lat, lng));
+        }
+    });
 </script>
 {% endblock %}
