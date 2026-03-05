@@ -1,36 +1,30 @@
 {% extends "base.html" %}
-{% block title %}Login — BroLift{% endblock %}
+{% block title %}Sign In — BroLift{% endblock %}
 {% block content %}
 <div class="auth-page">
-    <div class="auth-left">
-        <div class="auth-brand">
-            <span class="logo-text">Bro<span class="logo-accent">Lift</span></span>
+    <div class="card" style="width: 100%; max-width: 400px; margin: 40px auto;">
+        <div style="text-align: center; margin-bottom: 32px;">
+            <span class="logo-text" style="display: inline-block; font-size: 28px;">Bro<span
+                    class="logo-accent">Lift</span></span>
+            <h2 style="margin-top: 16px; font-weight: 400;">Sign In</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 8px;">Use your SRM IST account</p>
         </div>
-        <h2>Welcome Back!</h2>
-        <p>Sign in to manage your rides, track passengers, and commute smarter with SRM students.</p>
-        <div class="auth-perks">
-            <div class="perk">View your hosted rides</div>
-            <div class="perk">Track your pickup status</div>
-            <div class="perk">See your fuel savings</div>
-        </div>
-    </div>
-    <div class="auth-right">
-        <div class="auth-card">
-            <h2 class="auth-title">Sign In</h2>
-            <p class="auth-sub">Access your BroLift account</p>
-            <form method="POST" class="auth-form">
-                <div class="form-group">
-                    <label for="email">SRM IST Email</label>
-                    <input type="email" id="email" name="email" placeholder="st6546@srmist.edu.in" required autofocus>
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="Your password" required>
-                </div>
-                <button type="submit" class="btn-form-submit">Sign In</button>
-            </form>
-            <p class="auth-redirect">New to BroLift? <a href="{{ url_for('auth.register') }}">Create Account</a></p>
-        </div>
+
+        <form method="POST">
+            <div class="form-group">
+                <input type="email" id="email" name="email" placeholder="Email (st6546@srmist.edu.in)" required
+                    autofocus>
+            </div>
+            <div class="form-group">
+                <input type="password" id="password" name="password" placeholder="Password" required>
+            </div>
+            <button type="submit" class="btn-form-submit">Next</button>
+        </form>
+
+        <p style="text-align: center; margin-top: 32px; font-size: 14px;">
+            Not your computer? Use Guest mode to sign in privately. <br><br>
+            <a href="{{ url_for('auth.register') }}" style="font-weight: 500;">Create account</a>
+        </p>
     </div>
 </div>
 {% endblock %}

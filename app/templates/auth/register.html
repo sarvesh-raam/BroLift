@@ -1,121 +1,109 @@
 {% extends "base.html" %}
-{% block title %}Register — BroLift{% endblock %}
+{% block title %}Create Account — BroLift{% endblock %}
 {% block content %}
 <div class="auth-page">
-    <div class="auth-left">
-        <div class="auth-brand"><span class="logo-text">Bro<span class="logo-accent">Lift</span></span></div>
-        <h2>Join the Community</h2>
-        <p>Connect with SRM students and make commuting cheaper and greener.</p>
-        <div class="auth-perks">
-            <div class="perk">Only for verified SRM IST students</div>
-            <div class="perk">Auto-calculated fuel cost split</div>
-            <div class="perk">Google Maps route navigation</div>
+    <div class="card" style="width: 100%; max-width: 500px; margin: 40px auto;">
+        <div style="text-align: center; margin-bottom: 32px;">
+            <span class="logo-text" style="display: inline-block; font-size: 28px;">Bro<span
+                    class="logo-accent">Lift</span></span>
+            <h2 style="margin-top: 16px; font-weight: 400;">Create Account</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 8px;">To continue to BroLift</p>
         </div>
-    </div>
-    <div class="auth-right">
-        <div class="auth-card">
-            <h2 class="auth-title">Create Account</h2>
-            <p class="auth-sub">Use your SRM IST email to register</p>
 
-            {% if errors %}
-            <div class="error-list">
-                {% for error in errors %}<div class="error-item">{{ error }}</div>{% endfor %}
+        {% if errors %}
+        <div class="flash flash-error" style="margin-bottom: 24px;">
+            <div>{% for error in errors %}<div>{{ error }}</div>{% endfor %}</div>
+        </div>
+        {% endif %}
+
+        <form method="POST">
+            <div class="form-group">
+                <input type="text" id="name" name="name" placeholder="Full Name" value="{{ form_data.get('name', '') }}"
+                    required>
             </div>
-            {% endif %}
+            <div class="form-group">
+                <input type="email" id="email" name="email" placeholder="SRM IST Email (st6546@srmist.edu.in)"
+                    value="{{ form_data.get('email', '') }}" required>
+                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Must be @srmist.edu.in</p>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <div class="form-group" style="flex: 1;">
+                    <input type="password" id="password" name="password" placeholder="Password" required>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm" required>
+                </div>
+            </div>
 
-            <form method="POST" class="auth-form">
+            <div class="form-group"
+                style="margin-top: 12px; border: 1px solid var(--border); padding: 16px; border-radius: var(--radius-md);">
+                <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 400;">
+                    <input type="checkbox" id="has_vehicle" name="has_vehicle" style="width: 20px; height: 20px;"
+                        onchange="toggleVehicleFields(this.checked)" {% if form_data.get('has_vehicle') %}checked{%
+                        endif %}>
+                    <span>I have a vehicle (to host rides)</span>
+                </label>
+            </div>
+
+            <div id="vehicle-fields"
+                style="display:none; margin-top: 24px; border-top: 1px solid var(--border); padding-top: 24px;">
                 <div class="form-group">
-                    <label for="name">Full Name</label>
-                    <input type="text" id="name" name="name" placeholder="Your full name"
-                        value="{{ form_data.get('name', '') }}" required>
+                    <label style="font-size: 13px;">Vehicle Type</label>
+                    <div style="display: flex; gap: 24px; margin-top: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 400;">
+                            <input type="radio" name="vehicle_type" value="car" style="width: 18px; height: 18px;"
+                                onchange="toggleVehicleType('car')" {% if form_data.get('vehicle_type', 'car' )=='car'
+                                %}checked{% endif %}> Car
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 400;">
+                            <input type="radio" name="vehicle_type" value="bike" style="width: 18px; height: 18px;"
+                                onchange="toggleVehicleType('bike')" {% if form_data.get('vehicle_type')=='bike'
+                                %}checked{% endif %}> Bike
+                        </label>
+                    </div>
                 </div>
+
+                <div id="car-capacity-field" class="form-group">
+                    <label style="font-size: 13px;">Seating Capacity</label>
+                    <div style="display: flex; gap: 24px; margin-top: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 400;">
+                            <input type="radio" name="vehicle_capacity" value="5" style="width: 18px; height: 18px;" {%
+                                if form_data.get('vehicle_capacity', '5' )=='5' %}checked{% endif %}> 5-Seater
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 400;">
+                            <input type="radio" name="vehicle_capacity" value="7" style="width: 18px; height: 18px;" {%
+                                if form_data.get('vehicle_capacity')=='7' %}checked{% endif %}> 7-Seater
+                        </label>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <input type="text" name="vehicle_model" placeholder="Model (e.g. Amaze)"
+                            value="{{ form_data.get('vehicle_model', '') }}">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <input type="text" name="vehicle_number" placeholder="Plate (TN01...)"
+                            value="{{ form_data.get('vehicle_number', '') }}">
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label for="email">SRM IST Email</label>
-                    <input type="email" id="email" name="email" placeholder="st6546@srmist.edu.in"
-                        value="{{ form_data.get('email', '') }}" required>
-                    <span class="form-hint">Format: 2 letters + 4 digits @srmist.edu.in</span>
+                    <input type="number" name="vehicle_mileage" placeholder="Mileage (km/L)" step="0.1"
+                        value="{{ form_data.get('vehicle_mileage', '15') }}">
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" id="password" name="password" placeholder="Min 6 characters" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="confirm_password">Confirm Password</label>
-                        <input type="password" id="confirm_password" name="confirm_password"
-                            placeholder="Repeat password" required>
-                    </div>
-                </div>
+            </div>
 
-                <div class="form-toggle-group">
-                    <label class="toggle-label">
-                        <input type="checkbox" id="has_vehicle" name="has_vehicle"
-                            onchange="toggleVehicleFields(this.checked)" {% if form_data.get('has_vehicle') %}checked{%
-                            endif %}>
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-text">I have a vehicle and want to host rides</span>
-                    </label>
-                </div>
+            <button type="submit" class="btn-form-submit" style="margin-top: 24px;">Create Account</button>
+        </form>
 
-                <div id="vehicle-fields" style="display:none;">
-                    <!-- Vehicle type -->
-                    <div class="form-group">
-                        <label>Vehicle Type</label>
-                        <div class="radio-group">
-                            <label class="radio-opt">
-                                <input type="radio" name="vehicle_type" value="car" onchange="toggleVehicleType('car')"
-                                    {% if form_data.get('vehicle_type', 'car' )=='car' %}checked{% endif %}> Car
-                            </label>
-                            <label class="radio-opt">
-                                <input type="radio" name="vehicle_type" value="bike"
-                                    onchange="toggleVehicleType('bike')" {% if form_data.get('vehicle_type')=='bike'
-                                    %}checked{% endif %}> Bike
-                            </label>
-                        </div>
-                    </div>
-                    <!-- Car capacity (only for car) -->
-                    <div id="car-capacity-field" class="form-group">
-                        <label>Car Seating Capacity</label>
-                        <div class="radio-group">
-                            <label class="radio-opt">
-                                <input type="radio" name="vehicle_capacity" value="5" {% if
-                                    form_data.get('vehicle_capacity', '5' )=='5' %}checked{% endif %}> 5-Seater
-                            </label>
-                            <label class="radio-opt">
-                                <input type="radio" name="vehicle_capacity" value="7" {% if
-                                    form_data.get('vehicle_capacity')=='7' %}checked{% endif %}> 7-Seater
-                            </label>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="vehicle_model">Vehicle Model</label>
-                            <input type="text" id="vehicle_model" name="vehicle_model"
-                                placeholder="e.g. Honda City / TVS Apache"
-                                value="{{ form_data.get('vehicle_model', '') }}">
-                        </div>
-                        <div class="form-group">
-                            <label for="vehicle_number">Vehicle Number</label>
-                            <input type="text" id="vehicle_number" name="vehicle_number" placeholder="e.g. TN01AB1234"
-                                value="{{ form_data.get('vehicle_number', '') }}">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="vehicle_mileage">Mileage (km per litre)</label>
-                        <input type="number" id="vehicle_mileage" name="vehicle_mileage"
-                            placeholder="e.g. 15 for car, 40 for bike" step="0.1" min="1"
-                            value="{{ form_data.get('vehicle_mileage', '15') }}">
-                        <span class="form-hint">Used to auto-calculate fuel cost when hosting</span>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn-form-submit">Create My Account</button>
-            </form>
-            <p class="auth-redirect">Already have an account? <a href="{{ url_for('auth.login') }}">Sign In</a></p>
-        </div>
+        <p style="text-align: center; margin-top: 32px; font-size: 14px;">
+            <a href="{{ url_for('auth.login') }}" style="font-weight: 500;">Sign in instead</a>
+        </p>
     </div>
 </div>
 {% endblock %}
+
 {% block extra_scripts %}
 <script>
     function toggleVehicleFields(show) {

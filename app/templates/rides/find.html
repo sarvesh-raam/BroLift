@@ -1,190 +1,155 @@
 {% extends "base.html" %}
 {% block title %}Find a Ride — BroLift{% endblock %}
-{% block extra_head %}
-<script>
-    window.gm_authFailure = function () { };
-    function loadMapsScript() {
-        var s = document.createElement('script');
-        s.src = 'https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initPlaces';
-        s.async = true; s.defer = true;
-        document.head.appendChild(s);
-    }
-    window.addEventListener('load', loadMapsScript);
-</script>
-{% endblock %}
 {% block content %}
-<div class="find-screen">
-
-    <!-- Top Search Bar -->
-    <div class="find-header">
-        <h1 class="find-title">Find a Ride</h1>
-        <p class="find-sub">Rides from your area to SRM IST</p>
+<div class="container">
+    <div style="margin-bottom: 32px;">
+        <h1 style="font-size: 24px; font-weight: 500;">Find a Ride</h1>
+        <p style="color: var(--text-secondary); font-size: 14px;">Rides from your area to SRM IST</p>
     </div>
 
-    <!-- Search Form -->
-    <form method="POST" class="find-form" id="find-form">
+    <!-- Quick Date Select -->
+    <div style="display: flex; gap: 8px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px;">
+        <button type="button" class="nav-link" style="border: 1px solid var(--border); white-space: nowrap;"
+            onclick="setDate('{{ today }}')">Today</button>
+        <button type="button" class="nav-link" style="border: 1px solid var(--border); white-space: nowrap;"
+            onclick="setDate('{{ tomorrow }}')">Tomorrow</button>
+        <button type="button" class="nav-link" style="border: 1px solid var(--border); white-space: nowrap;"
+            onclick="document.getElementById('search_date').showPicker()">Other Date</button>
+    </div>
 
-        <!-- Date Chips (Quick Select) -->
-        <div class="date-chip-row">
-            <button type="button" class="date-chip" onclick="setDate('{{ today }}')">Today</button>
-            <button type="button" class="date-chip" onclick="setDate('{{ tomorrow }}')">Tomorrow</button>
-            <button type="button" class="date-chip date-chip-pick"
-                onclick="document.getElementById('search_date').showPicker()">
-                Pick Date 📅
-            </button>
-        </div>
+    <form method="POST" id="find-form">
         <input type="date" id="search_date" name="search_date" value="{{ search_data.get('search_date', '') }}"
-            min="{{ today }}" onchange="autoSubmit()" required
-            style="position:absolute;opacity:0;pointer-events:none;top:0;left:0">
+            min="{{ today }}" onchange="this.form.submit()" style="display: none;">
 
-        {% if search_data.get('search_date') %}
-        <div class="selected-date-bar">
-            Showing rides for <strong>{{ search_data.get('search_date') }}</strong>
-            <button type="button" onclick="clearDate()" class="clear-date-btn">✕ Clear</button>
+        <div class="form-group" style="position: relative;">
+            <input type="text" id="pickup_input" name="pickup_location" placeholder="Filter by area (e.g. Tambaram)"
+                value="{{ search_data.get('pickup_location', '') }}"
+                style="padding-left: 44px; border-radius: var(--radius-xl);">
+            <span class="material-icons-outlined"
+                style="position: absolute; left: 14px; top: 12px; color: var(--text-secondary);">location_on</span>
         </div>
-        {% endif %}
-
-        <!-- Pickup Location -->
-        <div class="pickup-row">
-            <span class="pickup-dot"></span>
-            <input type="text" id="pickup_input" name="pickup_location" placeholder="Filter by pickup area (optional)"
-                value="{{ search_data.get('pickup_location', '') }}" autocomplete="off" class="pickup-input">
-            {% if search_data.get('pickup_location') %}
-            <button type="button" onclick="document.getElementById('pickup_input').value=''"
-                class="clear-btn">✕</button>
-            {% endif %}
-        </div>
-
-        <!-- Optional time filter -->
-        <div class="time-filter-row" id="time-filter-row" style="display:none">
-            <label class="time-filter-label">Filter by time:</label>
-            <input type="time" name="preferred_time" id="preferred_time"
-                value="{{ search_data.get('preferred_time', '') }}" class="time-filter-input">
-            <a href="#" onclick="toggleTimeFilter()" class="hide-link">Hide</a>
-        </div>
-        <a href="#" onclick="toggleTimeFilter()" class="show-time-link" id="show-time-link">+ Filter by time</a>
-
-        <button type="submit" class="find-search-btn">Search Rides</button>
     </form>
 
-    <!-- Results -->
-    <div class="find-results">
+    <div class="card" style="padding: 0; height: 250px; overflow: hidden; margin-bottom: 24px;">
+        <div id="find-map" style="width: 100%; height: 100%; background: #eee;"></div>
+    </div>
+
+    {% if search_data.get('search_date') %}
+    <div style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">
+        Rides for <strong>{{ search_data.get('search_date') }}</strong>
+    </div>
+    {% endif %}
+
+    <div class="results-list">
         {% if rides %}
-        <div class="results-header">
-            <span class="results-count-txt">{{ rides|length }} ride{{ 's' if rides|length != 1 }} found</span>
-            <span class="results-date-txt">{{ search_data.get('search_date', '') }}</span>
-        </div>
-        <div class="ride-cards-list">
-            {% for ride in rides %}
-            <a href="{{ url_for('rides.ride_detail', ride_id=ride.id) }}" class="ride-booking-card">
-                <!-- Host Info -->
-                <div class="rbc-top">
-                    <div class="rbc-avatar">{{ ride.host.name[0].upper() }}</div>
-                    <div class="rbc-host-info">
-                        <div class="rbc-host-name">{{ ride.host.name }}&nbsp;
-                            <span class="rbc-vtype">{{ ride.vehicle_type | title if ride.vehicle_type else 'Car'
-                                }}</span>
-                        </div>
-                        <div class="rbc-host-vehicle">
-                            {{ ride.host.vehicle_model or '' }}
-                            {% if ride.host.vehicle_number %} · {{ ride.host.vehicle_number }}{% endif %}
-                        </div>
-                    </div>
-                    <div class="rbc-time">
-                        <div class="rbc-time-val">{{ ride.departure_time.strftime('%I:%M') }}</div>
-                        <div class="rbc-time-ampm">{{ ride.departure_time.strftime('%p') }}</div>
+        {% for ride in rides %}
+        <a href="{{ url_for('rides.ride_detail', ride_id=ride.id) }}" class="ride-row"
+            style="display: block; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <span class="user-avatar" style="width: 40px; height: 40px;">{{ ride.host.name[0].upper() }}</span>
+                    <div>
+                        <div style="font-weight: 500; font-size: 16px;">{{ ride.host.name }}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">{{ ride.host.vehicle_model }}</div>
                     </div>
                 </div>
-
-                <!-- Route -->
-                <div class="rbc-route">
-                    <div class="rbc-route-point">
-                        <span class="rbc-dot green-dot-sm"></span>
-                        <span class="rbc-loc">{{ ride.start_location | truncate(40, True, '…') }}</span>
-                    </div>
-                    <div class="rbc-arrow-down">↓</div>
-                    <div class="rbc-route-point">
-                        <span class="rbc-dot blue-dot-sm"></span>
-                        <span class="rbc-loc">SRM IST Campus</span>
-                    </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 20px; font-weight: 500;">₹{{ ride.cost_per_person }}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">per person</div>
                 </div>
-
-                <!-- Footer Chips -->
-                <div class="rbc-footer">
-                    <div class="rbc-chip seats-chip">{{ ride.seats_available }} seat{{ 's' if ride.seats_available != 1
-                        }} left</div>
-                    {% if ride.distance_km %}<div class="rbc-chip">{{ ride.distance_km }} km</div>{% endif %}
-                    <div class="rbc-cost">Rs.{{ ride.cost_per_person }}<span class="rbc-cost-label">/person</span></div>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-
-        {% elif search_data %}
-        <div class="no-rides-found">
-            <div class="nrf-icon">🚫</div>
-            <div class="nrf-title">No rides on this day</div>
-            <div class="nrf-sub">Try a different date or check back closer to the date.</div>
-            <button type="button" onclick="setDate('{{ tomorrow }}')" class="nrf-btn">Try Tomorrow</button>
-        </div>
-
-        {% else %}
-        <div class="find-prompt">
-            <div class="fp-icon">📅</div>
-            <div class="fp-title">Select a date above</div>
-            <div class="fp-sub">Tap <strong>Today</strong> or <strong>Tomorrow</strong> to see available rides instantly
             </div>
+
+            <div style="margin-left: 52px;">
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 4px;">
+                    <span class="material-icons-outlined"
+                        style="font-size: 16px; color: var(--google-green);">schedule</span>
+                    <span>{{ ride.departure_time.strftime('%I:%M %p') }}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                    <span class="material-icons-outlined" style="font-size: 16px; color: var(--primary);">near_me</span>
+                    <span>{{ ride.start_location | truncate(50) }}</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <span
+                    style="background: var(--surface); padding: 4px 10px; border-radius: var(--radius-full); font-size: 11px; font-weight: 500; color: var(--text-secondary);">
+                    {{ ride.seats_available }} seat{{ 's' if ride.seats_available != 1 }} left
+                </span>
+                {% if ride.distance_km %}
+                <span
+                    style="background: var(--surface); padding: 4px 10px; border-radius: var(--radius-full); font-size: 11px; font-weight: 500; color: var(--text-secondary);">
+                    {{ ride.distance_km }} km
+                </span>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+        {% elif search_data %}
+        <div style="text-align: center; padding: 64px 0; color: var(--text-secondary);">
+            <span class="material-icons-outlined" style="font-size: 48px; margin-bottom: 16px;">search_off</span>
+            <p>No rides found for this date. Check back later!</p>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 64px 0; color: var(--text-secondary);">
+            <span class="material-icons-outlined" style="font-size: 48px; margin-bottom: 16px;">event</span>
+            <p>Select a date to see available rides</p>
         </div>
         {% endif %}
     </div>
 </div>
-{% endblock %}
-{% block extra_scripts %}
+
 <script>
-    var TODAY = '{{ today }}';
-    var TOMORROW = '{{ tomorrow }}';
+    var ridesData = {{ rides_json | safe }};
 
     function setDate(d) {
         document.getElementById('search_date').value = d;
-        document.querySelectorAll('.date-chip').forEach(function (c) { c.classList.remove('active'); });
-        if (d === TODAY) document.querySelectorAll('.date-chip')[0].classList.add('active');
-        else if (d === TOMORROW) document.querySelectorAll('.date-chip')[1].classList.add('active');
         document.getElementById('find-form').submit();
     }
 
-    function clearDate() {
-        document.getElementById('search_date').value = '';
-        document.getElementById('find-form').submit();
-    }
+    var COLLEGE_LAT = {{ college_lat or 12.8231 }};
+    var COLLEGE_LNG = {{ college_lng or 80.0444 }};
 
-    function autoSubmit() {
-        document.getElementById('find-form').submit();
-    }
+    function initFindMap() {
+        const mapDiv = document.getElementById('find-map');
+        if (!mapDiv) return;
 
-    function toggleTimeFilter() {
-        var row = document.getElementById('time-filter-row');
-        var link = document.getElementById('show-time-link');
-        var visible = row.style.display !== 'none';
-        row.style.display = visible ? 'none' : 'flex';
-        link.style.display = visible ? 'block' : 'none';
-    }
+        var map = new google.maps.Map(mapDiv, {
+            center: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
+            zoom: 11,
+            disableDefaultUI: true
+        });
 
-    // Mark active date chip on load
-    (function () {
-        var val = document.getElementById('search_date').value;
-        if (val === TODAY) document.querySelectorAll('.date-chip')[0].classList.add('active');
-        else if (val === TOMORROW) document.querySelectorAll('.date-chip')[1].classList.add('active');
-    })();
+        // College Marker
+        new google.maps.Marker({
+            position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
+            map: map,
+            icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+            title: 'SRM IST Campus'
+        });
 
-    // Google Places autocomplete for pickup
-    function initPlaces() {
-        var input = document.getElementById('pickup_input');
-        if (input && typeof google !== 'undefined') {
-            var ac = new google.maps.places.Autocomplete(input, { componentRestrictions: { country: 'in' } });
-            ac.addListener('place_changed', function () {
-                setTimeout(function () { document.getElementById('find-form').submit(); }, 300);
+        // Ride Markers
+        if (Array.isArray(ridesData)) {
+            ridesData.forEach(function (r) {
+                var marker = new google.maps.Marker({
+                    position: { lat: r.lat, lng: r.lng },
+                    map: map,
+                    label: { text: '₹', color: 'white' },
+                    title: r.label
+                });
+                marker.addListener('click', function () {
+                    window.location.href = '/ride/' + r.id;
+                });
             });
         }
     }
+
+    function loadMapsScript() {
+        var s = document.createElement('script');
+        s.src = 'https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initFindMap';
+        s.async = true; s.defer = true;
+        document.head.appendChild(s);
+    }
+    window.addEventListener('load', loadMapsScript);
 </script>
 {% endblock %}

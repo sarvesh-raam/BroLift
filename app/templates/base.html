@@ -7,9 +7,11 @@
     <title>{% block title %}BroLift{% endblock %}</title>
     <meta name="description" content="BroLift — Smart carpooling for SRM IST students.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     {% block extra_head %}{% endblock %}
 </head>
 
@@ -21,19 +23,15 @@
             </a>
             <div class="nav-links">
                 {% if current_user.is_authenticated %}
-                <a href="{{ url_for('dashboard.index') }}" class="nav-link">Dashboard</a>
-                <a href="{{ url_for('rides.host_ride') }}" class="nav-link">Host Ride</a>
-                <a href="{{ url_for('rides.find_ride') }}" class="nav-link">Find Ride</a>
-                <div class="nav-user">
-                    <span class="user-avatar">{{ current_user.name[0].upper() }}</span>
-                    <div class="user-dropdown">
-                        <a href="{{ url_for('auth.profile') }}">Profile</a>
-                        <a href="{{ url_for('auth.logout') }}">Logout</a>
-                    </div>
-                </div>
+                <a href="{{ url_for('dashboard.index') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('rides.find_ride') }}" class="nav-link">Find</a>
+                <a href="{{ url_for('rides.host_ride') }}" class="nav-link">Host</a>
+                <a href="{{ url_for('auth.profile') }}" class="nav-user-link">
+                    <span class="user-avatar" style="width:32px; height:32px;">{{ current_user.name[0].upper() }}</span>
+                </a>
                 {% else %}
-                <a href="{{ url_for('auth.login') }}" class="nav-link">Login</a>
-                <a href="{{ url_for('auth.register') }}" class="btn-primary">Join BroLift</a>
+                <a href="{{ url_for('auth.login') }}" class="nav-link">Sign In</a>
+                <a href="{{ url_for('auth.register') }}" class="btn-primary">Get Started</a>
                 {% endif %}
             </div>
         </div>
@@ -41,11 +39,12 @@
 
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="flash-container" id="flash-container">
+    <div class="flash-container">
         {% for category, message in messages %}
         <div class="flash flash-{{ category }}">
             <span>{{ message }}</span>
-            <button onclick="this.parentElement.remove()">✕</button>
+            <button onclick="this.parentElement.remove()"
+                style="background:none; border:none; cursor:pointer;">✕</button>
         </div>
         {% endfor %}
     </div>
@@ -60,31 +59,30 @@
     <nav class="bottom-nav">
         <a href="{{ url_for('dashboard.index') }}"
             class="bn-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
-            <span class="bn-icon">&#8962;</span>
+            <span class="bn-icon">home</span>
             <span>Home</span>
         </a>
         <a href="{{ url_for('rides.find_ride') }}"
             class="bn-item {% if request.endpoint == 'rides.find_ride' %}active{% endif %}">
-            <span class="bn-icon">&#128269;</span>
+            <span class="bn-icon">search</span>
             <span>Find</span>
         </a>
         {% if current_user.has_vehicle %}
         <a href="{{ url_for('rides.host_ride') }}"
             class="bn-item {% if request.endpoint == 'rides.host_ride' %}active{% endif %}">
-            <span class="bn-icon">&#43;</span>
+            <span class="bn-icon">add_circle</span>
             <span>Host</span>
         </a>
         {% endif %}
         <a href="{{ url_for('auth.profile') }}"
             class="bn-item {% if request.endpoint == 'auth.profile' %}active{% endif %}">
-            <span class="bn-icon">&#128100;</span>
+            <span class="bn-icon">person</span>
             <span>Profile</span>
         </a>
-    </nav>
-    {% endif %}
+        {% endif %}
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    {% block extra_scripts %}{% endblock %}
+        <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+        {% block extra_scripts %}{% endblock %}
 </body>
 
 </html>
