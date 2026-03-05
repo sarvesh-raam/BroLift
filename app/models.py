@@ -56,10 +56,12 @@ class Ride(db.Model):
     vehicle_type    = db.Column(db.String(10), default='car')
     fuel_type       = db.Column(db.String(10), default='petrol')
     status          = db.Column(db.String(20), default='confirmed')
+    passenger_preference = db.Column(db.String(20), default='any') # any / female_only
     notes           = db.Column(db.Text)
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
 
     requests = db.relationship('RideRequest', backref='ride', lazy=True, cascade='all, delete-orphan')
+    messages = db.relationship('Message', backref='ride', lazy=True, cascade='all, delete-orphan')
 
     @property
     def confirmed_passengers(self):
@@ -99,3 +101,16 @@ class RideRequest(db.Model):
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self): return f'<RideRequest {self.id}>'
+
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+    id         = db.Column(db.Integer, primary_key=True)
+    ride_id    = db.Column(db.Integer, db.ForeignKey('rides.id'), nullable=False)
+    sender_id  = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    content    = db.Column(db.Text, nullable=False)
+    timestamp  = db.Column(db.DateTime, default=datetime.utcnow)
+
+    sender = db.relationship('User', foreign_keys=[sender_id])
+
+    def __repr__(self): return f'<Message {self.id}>'

@@ -69,8 +69,10 @@ def host_ride():
             total_fuel_cost=fuel_cost,
             distance_km=request.form.get('distance_km', 0.0, type=float),
             vehicle_type=current_user.vehicle_type or 'car',
+            fuel_type=request.form.get('fuel_type', current_user.fuel_type or 'petrol'),
+            passenger_preference=request.form.get('passenger_preference', 'any'),
             notes=notes,
-            status='confirmed'   # Auto-confirm — ride is live immediately
+            status='confirmed'
         )
         db.session.add(ride)
         db.session.commit()
@@ -93,16 +95,26 @@ def find_ride():
         pickup_location = request.form.get('pickup_location', '').strip()
         search_date = request.form.get('search_date', '')
         preferred_time = request.form.get('preferred_time', '')
+        girls_only = request.form.get('girls_only') == '1'
         search_data = {
             'pickup_location': pickup_location,
             'search_date': search_date,
-            'preferred_time': preferred_time
+            'preferred_time': preferred_time,
+            'girls_only': girls_only
         }
 
         query = Ride.query.filter(
             Ride.status.in_(['pending', 'confirmed']),
             Ride.host_id != current_user.id
         )
+
+        # If user is NOT female, exclude female_only rides automatically
+        if not current_user.is_female:
+            query = query.filter(Ride.passenger_preference != 'female_only')
+
+        # Girls-only filter chip (female users can choose to only see girls-only rides)
+        if girls_only and current_user.is_female:
+            query = query.filter(Ride.passenger_preference == 'female_only')
 
         if search_date:
             try:
@@ -154,10 +166,43 @@ def find_ride():
 def ride_detail(ride_id):
     ride = Ride.query.get_or_404(ride_id)
     user_request = RideRequest.query.filter_by(ride_id=ride_id, rider_id=current_user.id).first()
+
+    # Get waypoints for confirmed passengers
+    waypoints = []
+    for req in ride.confirmed_passengers:
+        if req.pickup_lat and req.pickup_lng:
+            waypoints.append({
+                'lat': req.pickup_lat,
+                'lng': req.pickup_lng,
+                'name': req.rider.name
+            })
+
+    import json
+    waypoints_json = json.dumps(waypoints)
+
     return render_template('rides/detail.html', ride=ride, user_request=user_request,
+                           waypoints_json=waypoints_json,
                            maps_key=Config.GOOGLE_MAPS_API_KEY,
                            college_lat=Config.COLLEGE_LOCATION['lat'],
                            college_lng=Config.COLLEGE_LOCATION['lng'])
+
+@rides_bp.route('/ride/<int:ride_id>/chat', methods=['POST'])
+@login_required
+def send_message(ride_id):
+    ride = Ride.query.get_or_404(ride_id)
+    content = request.form.get('content', '').strip()
+
+    # Safety check: sender must be host or a confirmed passenger
+    is_confirmed = RideRequest.query.filter_by(ride_id=ride_id, rider_id=current_user.id, status='confirmed').first()
+    if not (current_user.id == ride.host_id or is_confirmed):
+        flash('You must join the ride to chat.', 'danger')
+        return redirect(url_for('rides.ride_detail', ride_id=ride_id))
+
+    if content:
+        msg = Message(ride_id=ride_id, sender_id=current_user.id, content=content)
+        db.session.add(msg)
+        db.session.commit()
+    return redirect(url_for('rides.ride_detail', ride_id=ride_id))
 
 @rides_bp.route('/ride/<int:ride_id>/request', methods=['POST'])
 @login_required
