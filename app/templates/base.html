@@ -12,6 +12,12 @@
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <script>
+        (function () {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     {% block extra_head %}{% endblock %}
 </head>
 
@@ -22,6 +28,10 @@
                 <span class="logo-text">Bro<span class="logo-accent">Lift</span></span>
             </a>
             <div class="nav-links">
+                <button id="theme-toggle" class="nav-link"
+                    style="background:none; border:none; cursor:pointer; display:flex; align-items:center;">
+                    <span class="material-icons-outlined" id="theme-icon">dark_mode</span>
+                </button>
                 {% if current_user.is_authenticated %}
                 <a href="{{ url_for('dashboard.index') }}" class="nav-link">Home</a>
                 <a href="{{ url_for('rides.find_ride') }}" class="nav-link">Find</a>
@@ -82,6 +92,27 @@
         {% endif %}
 
         <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+        <script>
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIcon = document.getElementById('theme-icon');
+
+            function updateIcon(theme) {
+                themeIcon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+            }
+
+            // Sync icon on load
+            updateIcon(document.documentElement.getAttribute('data-theme'));
+
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateIcon(newTheme);
+                window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: newTheme } }));
+            });
+        </script>
         {% block extra_scripts %}{% endblock %}
 </body>
 
