@@ -100,24 +100,53 @@
 </div>
 
 <script>
-    var ridesData = {{ rides_json | safe }};
+    var ridesData = JSON.parse('{{ rides_json|default("[]")|safe }}');
 
     function setDate(d) {
         document.getElementById('search_date').value = d;
         document.getElementById('find-form').submit();
     }
 
-    var COLLEGE_LAT = {{ college_lat or 12.8231 }};
-    var COLLEGE_LNG = {{ college_lng or 80.0444 }};
+    var COLLEGE_LAT = Number("{{ college_lat or 12.8231 }}");
+    var COLLEGE_LNG = Number("{{ college_lng or 80.0444 }}");
+
+    const NIGHT_STYLE = [
+        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+        { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+        { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+        { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#263c3f" }] },
+        { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#6b9a76" }] },
+        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+        { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
+        { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] },
+        { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] },
+        { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#1f2835" }] },
+        { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#f3d19c" }] },
+        { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] },
+        { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+        { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] },
+        { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#17263c" }] }
+    ];
 
     function initFindMap() {
         const mapDiv = document.getElementById('find-map');
         if (!mapDiv) return;
 
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
         var map = new google.maps.Map(mapDiv, {
             center: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
             zoom: 11,
-            disableDefaultUI: true
+            disableDefaultUI: true,
+            styles: isDark ? NIGHT_STYLE : []
+        });
+
+        // Listen for theme changes
+        window.addEventListener('theme-changed', (e) => {
+            map.setOptions({ styles: e.detail.theme === 'dark' ? NIGHT_STYLE : [] });
         });
 
         // College Marker

@@ -29,17 +29,26 @@
 
     <form method="POST" id="host-form">
         <div class="card">
-            <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--primary);">Route & Time</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="font-size: 16px; margin: 0; color: var(--primary);">Route & Time</h3>
+                <span id="route-status" style="font-size: 12px; color: var(--text-secondary);">Select origin</span>
+            </div>
 
             <div class="form-group" style="position: relative;">
                 <label>Starting Point</label>
                 <input type="text" id="start_location" name="start_location" placeholder="Where are you starting from?"
-                    value="{{ form_data.get('start_location', '') }}" required style="padding-left: 44px;">
+                    value="{{ form_data.get('start_location', '') }}" required
+                    style="padding-left: 44px; padding-right: 44px;">
                 <span class="material-icons-outlined"
                     style="position: absolute; left: 14px; top: 40px; color: var(--google-green);">location_on</span>
-                <input type="hidden" id="start_lat" name="start_lat">
-                <input type="hidden" id="start_lng" name="start_lng">
-                <input type="hidden" id="distance_km" name="distance_km" value="0">
+                <button type="button" onclick="geocodeFromInput()" class="nav-link"
+                    style="position: absolute; right: 10px; top: 38px; padding: 4px; background: none; border: none; cursor: pointer;">
+                    <span class="material-icons-outlined" style="font-size: 20px;">search</span>
+                </button>
+                <input type="hidden" id="start_lat" name="start_lat" value="{{ form_data.get('start_lat', '') }}">
+                <input type="hidden" id="start_lng" name="start_lng" value="{{ form_data.get('start_lng', '') }}">
+                <input type="hidden" id="distance_km" name="distance_km"
+                    value="{{ form_data.get('distance_km', '0') }}">
             </div>
 
             <div class="form-group" style="position: relative;">
@@ -85,8 +94,8 @@
         <div class="card">
             <h3 style="font-size: 16px; margin-bottom: 20px; color: var(--primary);">Fuel & Cost</h3>
 
-            <div style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 24px;">
-                <div class="form-group">
+            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+                <div class="form-group" style="flex: 1;">
                     <label>Fuel Type</label>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
                         {% for ft, label in [('petrol','Petrol'),('diesel','Diesel'),('cng','CNG'),('electric','EV')] %}
@@ -102,33 +111,44 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Passenger Preference</label>
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <label style="flex: 1; cursor: pointer;">
-                            <input type="radio" name="passenger_preference" value="any" style="display: none;" checked
-                                onchange="updateCost()">
-                            <div class="chip-ui"
-                                style="text-align: center; border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-md); font-size: 13px;">
-                                Everyone</div>
-                        </label>
-                        <label style="flex: 1; cursor: pointer;">
-                            <input type="radio" name="passenger_preference" value="female_only" style="display: none;"
-                                onchange="updateCost()">
-                            <div class="chip-ui"
-                                style="text-align: center; border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-md); font-size: 13px;">
-                                Girls Only</div>
-                        </label>
-                    </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Vehicle Mileage (km/L)</label>
+                    <input type="number" id="mileage_input" name="mileage"
+                        value="{{ current_user.vehicle_mileage or 15 }}" oninput="updateCost()"
+                        style="margin-top: 8px;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label>Passenger Preference</label>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <label style="flex: 1; cursor: pointer;">
+                        <input type="radio" name="passenger_preference" value="any" style="display: none;" checked
+                            onchange="updateCost()">
+                        <div class="chip-ui"
+                            style="text-align: center; border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-md); font-size: 13px;">
+                            Everyone</div>
+                    </label>
+                    <label style="flex: 1; cursor: pointer;">
+                        <input type="radio" name="passenger_preference" value="female_only" style="display: none;"
+                            onchange="updateCost()">
+                        <div class="chip-ui"
+                            style="text-align: center; border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-md); font-size: 13px;">
+                            Girls Only</div>
+                    </label>
                 </div>
             </div>
 
             <div style="display: flex; gap: 12px; align-items: flex-end;">
                 <div class="form-group" style="flex: 1;">
                     <label>Total Est. Cost (₹)</label>
-                    <input type="number" id="fuel_cost" name="fuel_cost" placeholder="Calculating..."
-                        value="{{ form_data.get('fuel_cost', '') }}"
-                        style="font-size: 16px; font-weight: 500; color: var(--primary);">
+                    <div style="position: relative;">
+                        <input type="number" id="fuel_cost" name="fuel_cost" placeholder="Waiting for route..."
+                            value="{{ form_data.get('fuel_cost', '') }}" readonly
+                            style="font-size: 18px; font-weight: 600; color: var(--primary); background: var(--surface);">
+                        <span id="cost-indicator" class="material-icons-outlined"
+                            style="position: absolute; right: 12px; top: 10px; font-size: 18px; color: var(--text-secondary); animation: pulse 2s infinite;">sync</span>
+                    </div>
                 </div>
                 <div style="flex: 1; padding-bottom: 20px; font-size: 13px; color: var(--text-secondary);">
                     Split cost will be shown to riders automatically.
@@ -158,22 +178,42 @@
 
     .chip-ui:hover {
         border-color: var(--primary-light);
-        background: #f8fbff;
+        background: var(--surface);
     }
 </style>
 
 <script>
-    var MILEAGE = {{ current_user.vehicle_mileage or 15 }};
+    var MILEAGE = Number("{{ current_user.vehicle_mileage or 15 }}");
     var FUEL_PRICES = { petrol: 102, diesel: 92, cng: 82, electric: 1.5 };
-    var COLLEGE_LAT = {{ college_lat or 12.8231 }};
-    var COLLEGE_LNG = {{ college_lng or 80.0444 }};
+    var COLLEGE_LAT = Number("{{ college_lat or 12.8231 }}");
+    var COLLEGE_LNG = Number("{{ college_lng or 80.0444 }}");
+
+    const NIGHT_STYLE = [
+        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+        { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+        { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+        { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#263c3f" }] },
+        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+        { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
+        { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] },
+        { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] },
+        { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+        { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] }
+    ];
 
     flatpickr('#departure_display', {
         enableTime: true,
         dateFormat: 'Y-m-dTH:i',
         minDate: 'today',
-        theme: 'light',
+        theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
         onChange: function (d, str) { document.getElementById('departure_time').value = str; }
+    });
+
+    window.addEventListener('theme-changed', (e) => {
+        // Simple way to refresh flatpickr instance if needed, but primary focus is maps
     });
 
     var map;
@@ -184,14 +224,41 @@
         const mapDiv = document.getElementById('host-map');
         if (!mapDiv) return;
 
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const darkStyle = [
+            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+            { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+        ];
+
         map = new google.maps.Map(mapDiv, {
             center: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
             zoom: 14,
             disableDefaultUI: true,
-            gestureHandling: 'greedy'
+            gestureHandling: 'greedy',
+            styles: isDark ? NIGHT_STYLE : []
         });
 
-        directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
+        window.addEventListener('theme-changed', (e) => {
+            map.setOptions({ styles: e.detail.theme === 'dark' ? NIGHT_STYLE : [] });
+        });
+
+        directionsRenderer = new google.maps.DirectionsRenderer({
+            map: map,
+            suppressMarkers: true,
+            polylineOptions: {
+                strokeColor: '#FF9F43', // High contrast vibrant orange
+                strokeWeight: 7,
+                strokeOpacity: 0.95
+            }
+        });
+
+        // SRM Marker
+        new google.maps.Marker({
+            position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
+            map: map,
+            icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+            title: 'SRM IST'
+        });
         const startInput = document.getElementById('start_location');
         if (!startInput) return;
 
@@ -200,12 +267,36 @@
             var place = ac.getPlace();
             if (place.geometry) {
                 updateLocationAndDistance(place.geometry.location);
+            } else if (place.name) {
+                // User typed something and pressed enter without selecting
+                geocodeFromInput();
             }
         });
 
         // Add click listener to map
         map.addListener('click', function (e) {
             updateLocationAndDistance(e.latLng, true);
+        });
+
+        // Add Enter key listener to input
+        startInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                geocodeFromInput();
+            }
+        });
+    }
+
+    function geocodeFromInput() {
+        const address = document.getElementById('start_location').value;
+        if (!address) return;
+
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address: address }, function (results, status) {
+            if (status === 'OK' && results[0]) {
+                updateLocationAndDistance(results[0].geometry.location);
+                map.setCenter(results[0].geometry.location);
+            }
         });
     }
 
@@ -233,68 +324,80 @@
     }
 
     function calculateDistance(origin) {
-        console.log('Calculating distance from:', origin.toString());
-        var service = new google.maps.DistanceMatrixService();
-        service.getDistanceMatrix({
-            origins: [origin],
-            destinations: [{ lat: COLLEGE_LAT, lng: COLLEGE_LNG }],
-            travelMode: 'DRIVING'
-        }, function (response, status) {
-            if (status == 'OK') {
-                var element = response.rows[0].elements[0];
-                if (element.status === 'OK') {
-                    var dist = element.distance.value / 1000;
-                    console.log('Distance found:', dist, 'km');
-                    document.getElementById('distance_km').value = dist.toFixed(1);
-                    updateCost();
+        const statusEl = document.getElementById('route-status');
+        const costInd = document.getElementById('cost-indicator');
+        if (statusEl) statusEl.textContent = '⏱️ Calculating...';
+        if (costInd) costInd.style.display = 'block';
 
-                    var ds = new google.maps.DirectionsService();
-                    ds.route({
-                        origin: origin,
-                        destination: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-                        travelMode: google.maps.TravelMode.DRIVING
-                    }, function (res, stat) {
-                        if (stat === 'OK') directionsRenderer.setDirections(res);
-                    });
-                } else {
-                    console.error('DistanceMatrix element status:', element.status);
-                }
+        var ds = new google.maps.DirectionsService();
+        ds.route({
+            origin: origin,
+            destination: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
+            travelMode: google.maps.TravelMode.DRIVING
+        }, function (res, status) {
+            if (status === 'OK') {
+                const leg = res.routes[0].legs[0];
+                const dist = leg.distance.value / 1000;
+                document.getElementById('distance_km').value = dist.toFixed(1);
+                directionsRenderer.setDirections(res);
+                if (statusEl) statusEl.textContent = '✅ ' + dist.toFixed(1) + ' km to SRM';
+                if (costInd) costInd.style.display = 'none';
+                updateCost();
             } else {
-                console.error('DistanceMatrix status:', status);
+                console.error('Directions request failed:', status);
+                if (statusEl) statusEl.textContent = '❌ No route found';
+                if (costInd) costInd.style.display = 'none';
+                updateCost(); // Reset to 0
             }
         });
     }
 
     function updateCost() {
-        var distInput = document.getElementById('distance_km');
-        if (!distInput) return;
-        var dist = parseFloat(distInput.value) || 0;
+        const distEl = document.getElementById('distance_km');
+        const mileageEl = document.getElementById('mileage_input');
+        const costEl = document.getElementById('fuel_cost');
+        if (!distEl || !mileageEl || !costEl) return;
 
-        var ftEl = document.querySelector('input[name="fuel_type"]:checked');
-        var ft = ftEl ? ftEl.value : 'petrol';
+        const dist = parseFloat(distEl.value) || 0;
+        const mileage = parseFloat(mileageEl.value) || 15;
+        const ftEl = document.querySelector('input[name="fuel_type"]:checked');
+        const ft = ftEl ? ftEl.value : 'petrol';
 
-        console.log('Updating cost for dist:', dist, 'fuel:', ft);
+        console.log('Calculating cost:', { dist, mileage, ft });
 
-        var cost = 0;
-        if (ft === 'electric') cost = dist * 2;
-        else cost = (dist / MILEAGE) * FUEL_PRICES[ft];
-
-        const costInput = document.getElementById('fuel_cost');
-        if (costInput) {
-            costInput.value = Math.ceil(cost);
-            console.log('Calculated cost:', costInput.value);
+        let cost = 0;
+        if (ft === 'electric') {
+            cost = dist * 2;
+        } else {
+            cost = (dist / mileage) * (FUEL_PRICES[ft] || 102);
         }
+
+        costEl.value = Math.ceil(cost);
+        console.log('Final cost target:', costEl.value);
     }
 
     function updateFuelUI(el) { updateCost(); }
 
+    // Initial calculation
+    window.addEventListener('load', updateCost);
+
     // Auto-calculate on load if values exist
     window.addEventListener('load', function () {
-        const lat = parseFloat(document.getElementById('start_lat').value);
-        const lng = parseFloat(document.getElementById('start_lng').value);
-        if (lat && lng) {
-            updateLocationAndDistance(new google.maps.LatLng(lat, lng));
-        }
+        setTimeout(() => {
+            const startLoc = document.getElementById('start_location').value;
+            const latEl = document.getElementById('start_lat');
+            const lngEl = document.getElementById('start_lng');
+
+            if (latEl.value && lngEl.value) {
+                const lat = parseFloat(latEl.value);
+                const lng = parseFloat(lngEl.value);
+                updateLocationAndDistance(new google.maps.LatLng(lat, lng));
+            } else if (startLoc) {
+                geocodeFromInput();
+            } else {
+                updateCost();
+            }
+        }, 1200); // Wait for Maps API to fully init
     });
 </script>
 {% endblock %}
