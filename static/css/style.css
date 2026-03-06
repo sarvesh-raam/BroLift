@@ -9,7 +9,8 @@
     --bg: #ffffff;
     --surface: #f8f9fa;
     --border: #dadce0;
-
+    --card-bg: #ffffff;
+    --nav-bg: #ffffff;
     --text-primary: #202124;
     --text-secondary: #5f6368;
 
@@ -19,6 +20,17 @@
     --radius-lg: 12px;
     --radius-xl: 24px;
     --radius-full: 99px;
+}
+
+[data-theme="dark"] {
+    --bg: #121212;
+    --surface: #1e1e1e;
+    --border: #3c4043;
+    --card-bg: #1e1e1e;
+    --nav-bg: #1e1e1e;
+    --text-primary: #e8eaed;
+    --text-secondary: #9aa0a6;
+    --primary-light: rgba(26, 115, 232, 0.15);
 }
 
 * {
@@ -41,7 +53,7 @@ a {
 
 /* Navigation */
 .navbar {
-    background: white;
+    background: var(--nav-bg);
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
@@ -105,7 +117,7 @@ a {
     bottom: 0;
     left: 0;
     right: 0;
-    background: white;
+    background: var(--nav-bg);
     border-top: 1px solid var(--border);
     height: 56px;
     z-index: 1000;
@@ -155,7 +167,7 @@ a {
 }
 
 .card {
-    background: white;
+    background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 24px;
@@ -173,11 +185,16 @@ a {
 
 .btn-hero-secondary {
     border: 1px solid var(--border);
-    color: var(--primary) !important;
+    color: var(--text-primary) !important;
     padding: 12px 32px;
     border-radius: var(--radius-full);
     font-weight: 500;
     display: inline-block;
+    background: var(--card-bg);
+}
+
+.btn-hero-secondary:hover {
+    background: var(--surface);
 }
 
 /* Auth */
@@ -211,12 +228,16 @@ a {
     margin-bottom: 8px;
 }
 
-input {
+input,
+select,
+textarea {
     width: 100%;
     padding: 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     font-size: 16px;
+    background: var(--card-bg);
+    color: var(--text-primary);
 }
 
 input:focus {
@@ -285,7 +306,8 @@ input:focus {
 }
 
 .action-card:hover {
-    background: var(--surface);
+    background: var(--primary-light);
+    border-color: var(--primary);
 }
 
 .action-icon {
@@ -341,7 +363,8 @@ input:focus {
 }
 
 .ride-row:hover {
-    background: var(--surface);
+    background: var(--primary-light);
+    border-color: var(--primary);
 }
 
 /* Flash */
