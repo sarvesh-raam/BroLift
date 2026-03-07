@@ -31,7 +31,6 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="font-size: 16px; margin: 0; color: var(--primary);">Route & Time</h3>
-                <span id="route-status" style="font-size: 12px; color: var(--text-secondary);">Select origin</span>
             </div>
 
             <div class="form-group" style="position: relative;">
@@ -88,6 +87,18 @@
             <!-- Route Preview Map -->
             <div id="host-map"
                 style="width: 100%; height: 320px; border-radius: var(--radius-md); margin-top: 8px; background: #f0f0f0; border: 1px solid var(--border); overflow: hidden;">
+            </div>
+
+            <div id="distance-info"
+                style="margin-top: 16px; padding: 12px; border-radius: var(--radius-md); background: var(--primary-light); display: none; align-items: center; gap: 12px;">
+                <span class="material-icons-outlined" style="color: var(--primary);">directions_car</span>
+                <div>
+                    <div
+                        style="font-size: 12px; font-weight: 500; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">
+                        ESTIMATED DISTANCE</div>
+                    <div id="route-status" style="font-size: 18px; font-weight: 600; color: var(--text-primary);">0.0 km
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -325,7 +336,10 @@
 
     function calculateDistance(origin) {
         const statusEl = document.getElementById('route-status');
+        const infoEl = document.getElementById('distance-info');
         const costInd = document.getElementById('cost-indicator');
+
+        if (infoEl) infoEl.style.display = 'flex';
         if (statusEl) statusEl.textContent = '⏱️ Calculating...';
         if (costInd) costInd.style.display = 'block';
 
@@ -340,7 +354,7 @@
                 const dist = leg.distance.value / 1000;
                 document.getElementById('distance_km').value = dist.toFixed(1);
                 directionsRenderer.setDirections(res);
-                if (statusEl) statusEl.textContent = '✅ ' + dist.toFixed(1) + ' km to SRM';
+                if (statusEl) statusEl.textContent = dist.toFixed(1) + ' km to SRM';
                 if (costInd) costInd.style.display = 'none';
                 updateCost();
             } else {

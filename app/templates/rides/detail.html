@@ -130,8 +130,8 @@
 
     {% endif %}
 
-    <!-- Chat Section -->
-    {% if current_user.id == ride.host_id or user_request.status == 'confirmed' %}
+    <!-- Chat Section for both Host and Confirmed Rider -->
+    {% if current_user.id == ride.host_id or (user_request and user_request.status == 'confirmed') %}
     <div style="margin-top: 40px;">
         <h3 style="font-size: 16px; margin-bottom: 16px;">Ride Chat</h3>
         <div class="card" style="padding: 0; display: flex; flex-direction: column; height: 300px;">
@@ -164,7 +164,7 @@
     {% endif %}
 
     <div style="margin-top: 32px;">
-        {% if ride.status == 'confirmed' %}
+        {% if current_user.id == ride.host_id and ride.status == 'confirmed' %}
         <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='completed') }}" class="btn-primary"
             style="display: block; text-align: center; margin-bottom: 12px;">Mark as Completed</a>
         <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='cancelled') }}"
@@ -173,7 +173,7 @@
     </div>
 
     {% else %}
-    <!-- Rider View -->
+    <!-- Rider View Section -->
     {% if user_request %}
     <div class="card" style="text-align: center; background: var(--primary-light); border-color: var(--primary);">
         <span class="material-icons-outlined" style="font-size: 32px; color: var(--primary); margin-bottom: 12px;">
