@@ -267,7 +267,7 @@
         var ds = new google.maps.DirectionsService();
         var dr = new google.maps.DirectionsRenderer({
             map: map,
-            suppressMarkers: false,
+            suppressMarkers: true,
             polylineOptions: { strokeColor: '#1a73e8', strokeWeight: 5, strokeOpacity: 0.8 }
         });
 
@@ -279,16 +279,49 @@
             if (status === 'OK') dr.setDirections(res);
         });
 
+        // Always show Start (A) and Destination (B)
+        new google.maps.Marker({
+            position: { lat: START_LAT, lng: START_LNG },
+            map: map,
+            label: { text: 'A', color: 'white' },
+            title: "Start Point"
+        });
+
+        new google.maps.Marker({
+            position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
+            map: map,
+            label: { text: 'B', color: 'white' },
+            title: "SRM IST Campus"
+        });
+
+        // Plot all confirmed passenger waypoints for both host and guest
+        var plottedCoords = [];
+        if (waypoints && waypoints.length > 0) {
+            waypoints.forEach(function (wp) {
+                plottedCoords.push(wp.lat + ',' + wp.lng);
+                new google.maps.Marker({
+                    position: { lat: wp.lat, lng: wp.lng },
+                    map: map,
+                    label: { text: 'C', color: 'white' },
+                    icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                    title: wp.name + "'s Pickup Point"
+                });
+            });
+        }
+
         var pickupMarker = null;
 
-        // Plot existing pickup point if user has a request
+        // Plot existing pickup point if user has a request (and not already plotted as confirmed)
         if (USER_PICKUP_LAT && USER_PICKUP_LNG) {
-            pickupMarker = new google.maps.Marker({
-                position: { lat: USER_PICKUP_LAT, lng: USER_PICKUP_LNG },
-                map: map,
-                label: { text: 'C', color: 'white' },
-                title: "Your Pickup Point"
-            });
+            var coordKey = USER_PICKUP_LAT + ',' + USER_PICKUP_LNG;
+            if (!plottedCoords.includes(coordKey)) {
+                pickupMarker = new google.maps.Marker({
+                    position: { lat: USER_PICKUP_LAT, lng: USER_PICKUP_LNG },
+                    map: map,
+                    label: { text: 'C', color: 'white' },
+                    title: "Your Pickup Point"
+                });
+            }
 
             // Adjust bounds to include pickup point C
             var bounds = new google.maps.LatLngBounds();
@@ -297,56 +330,45 @@
             bounds.extend({ lat: USER_PICKUP_LAT, lng: USER_PICKUP_LNG });
             map.fitBounds(bounds);
         }
+    }
 
-        // Plot confirmed passenger waypoints for host
-        if (waypoints && waypoints.length > 0) {
-            waypoints.forEach(function (wp) {
-                new google.maps.Marker({
-                    position: { lat: wp.lat, lng: wp.lng },
-                    map: map,
-                    icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
-                    title: wp.name + "'s Pickup"
-                });
+    // Autocomplete for Join Request
+    var pickupInput = document.getElementById('pickup-input');
+
+    if (pickupInput) {
+        var autocomplete = new google.maps.places.Autocomplete(pickupInput, {
+            componentRestrictions: { country: 'in' },
+            fields: ['geometry', 'name', 'formatted_address']
+        });
+
+        autocomplete.addListener('place_changed', function () {
+            var place = autocomplete.getPlace();
+            if (!place.geometry) return;
+
+            var lat = place.geometry.location.lat();
+            var lng = place.geometry.location.lng();
+
+            document.getElementById('pickup-lat').value = lat;
+            document.getElementById('pickup-lng').value = lng;
+
+            // Add character 'C' marker
+            if (pickupMarker) pickupMarker.setMap(null);
+            pickupMarker = new google.maps.Marker({
+                position: { lat: lat, lng: lng },
+                map: map,
+                label: { text: 'C', color: 'white' },
+                animation: google.maps.Animation.DROP,
+                title: "Your Pickup Point"
             });
-        }
 
-        // Autocomplete for Join Request
-        var pickupInput = document.getElementById('pickup-input');
-
-        if (pickupInput) {
-            var autocomplete = new google.maps.places.Autocomplete(pickupInput, {
-                componentRestrictions: { country: 'in' },
-                fields: ['geometry', 'name', 'formatted_address']
-            });
-
-            autocomplete.addListener('place_changed', function () {
-                var place = autocomplete.getPlace();
-                if (!place.geometry) return;
-
-                var lat = place.geometry.location.lat();
-                var lng = place.geometry.location.lng();
-
-                document.getElementById('pickup-lat').value = lat;
-                document.getElementById('pickup-lng').value = lng;
-
-                // Add character 'C' marker
-                if (pickupMarker) pickupMarker.setMap(null);
-                pickupMarker = new google.maps.Marker({
-                    position: { lat: lat, lng: lng },
-                    map: map,
-                    label: { text: 'C', color: 'white' },
-                    animation: google.maps.Animation.DROP,
-                    title: "Your Pickup Point"
-                });
-
-                // Adjust map bounds to show Start, College and the new point C
-                var bounds = new google.maps.LatLngBounds();
-                bounds.extend({ lat: START_LAT, lng: START_LNG });
-                bounds.extend({ lat: COLLEGE_LAT, lng: COLLEGE_LNG });
-                bounds.extend({ lat: lat, lng: lng });
-                map.fitBounds(bounds);
-            });
-        }
+            // Adjust map bounds to show Start, College and the new point C
+            var bounds = new google.maps.LatLngBounds();
+            bounds.extend({ lat: START_LAT, lng: START_LNG });
+            bounds.extend({ lat: COLLEGE_LAT, lng: COLLEGE_LNG });
+            bounds.extend({ lat: lat, lng: lng });
+            map.fitBounds(bounds);
+        });
+    }
     }
 </script>
 {% endblock %}
