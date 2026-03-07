@@ -27,6 +27,7 @@ def register():
         vehicle_capacity = request.form.get('vehicle_capacity', 5, type=int)
         vehicle_mileage = request.form.get('vehicle_mileage', 15.0, type=float)
         fuel_type = request.form.get('fuel_type', 'petrol')
+        gender = request.form.get('gender', 'other')
 
         errors = []
         if not name:
@@ -53,7 +54,8 @@ def register():
             vehicle_number=vehicle_number,
             vehicle_capacity=vehicle_capacity if vehicle_type == 'car' else 1,
             vehicle_mileage=vehicle_mileage,
-            fuel_type=fuel_type
+            fuel_type=fuel_type,
+            gender=gender
         )
         user.set_password(password)
         db.session.add(user)
@@ -98,6 +100,7 @@ def profile():
         current_user.vehicle_number = request.form.get('vehicle_number', '').strip()
         current_user.vehicle_mileage = request.form.get('vehicle_mileage', 15.0, type=float)
         current_user.fuel_type = request.form.get('fuel_type', 'petrol')
+        current_user.gender = request.form.get('gender', current_user.gender)
         if current_user.vehicle_type == 'car':
             current_user.vehicle_capacity = request.form.get('vehicle_capacity', 5, type=int)
         else:

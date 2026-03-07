@@ -21,10 +21,15 @@ class User(UserMixin, db.Model):
     vehicle_capacity = db.Column(db.Integer, default=5)         # 5 or 7 for car, 1 for bike
     vehicle_mileage  = db.Column(db.Float, default=15.0)        # km per litre/kg
     fuel_type      = db.Column(db.String(10), default='petrol') # petrol/diesel/cng/electric
+    gender         = db.Column(db.String(10), default='other')  # male/female/other
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
 
     hosted_rides   = db.relationship('Ride', backref='host', lazy=True, foreign_keys='Ride.host_id')
     ride_requests  = db.relationship('RideRequest', backref='rider', lazy=True)
+
+    @property
+    def is_female(self):
+        return self.gender == 'female'
 
     # backward-compat
     @property
