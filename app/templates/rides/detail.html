@@ -89,48 +89,94 @@
     </div>
 
     <!-- Conditional Sections -->
-    {% if current_user.id == ride.host_id %}
-    <!-- Host View -->
-    <h3 style="font-size: 16px; margin-bottom: 16px;">Riders</h3>
-    {% set pending = ride.requests | selectattr('status', 'equalto', 'pending') | list %}
-    {% if pending %}
-    <div style="margin-bottom: 24px;">
-        <h4 style="font-size: 13px; color: var(--google-red); margin-bottom: 12px;">Pending Approvals ({{ pending |
-            length }})</h4>
-        {% for req in pending %}
-        <div class="card" style="margin-bottom: 12px; padding: 16px;">
-            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
-                <span class="user-avatar" style="width: 32px; height: 32px;">{{ req.rider.name[0].upper() }}</span>
+    <div style="margin-top: 32px;">
+        {% if current_user.id == ride.host_id %}
+        <!-- HOST VIEW: Manage Riders -->
+        <h3 style="font-size: 16px; margin-bottom: 16px;">Management</h3>
+
+        {% set pending = ride.requests | selectattr('status', 'equalto', 'pending') | list %}
+        {% if pending %}
+        <div style="margin-bottom: 24px;">
+            <h4 style="font-size: 13px; color: var(--google-red); margin-bottom: 12px;">Pending Approvals ({{ pending |
+                length }})</h4>
+            {% for req in pending %}
+            <div class="card" style="margin-bottom: 12px; padding: 16px;">
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                    <span class="user-avatar" style="width: 32px; height: 32px;">{{ req.rider.name[0].upper() }}</span>
+                    <div style="font-weight: 500;">{{ req.rider.name }}</div>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Pickup: {{
+                    req.pickup_location }}</p>
+                <div style="display: flex; gap: 8px;">
+                    <a href="{{ url_for('rides.manage_request', ride_id=ride.id, request_id=req.id, action='confirm') }}"
+                        class="btn-primary"
+                        style="flex: 1; text-align: center; background: var(--google-green); font-size: 13px; padding: 8px;">Accept</a>
+                    <a href="{{ url_for('rides.manage_request', ride_id=ride.id, request_id=req.id, action='reject') }}"
+                        class="nav-link"
+                        style="flex: 1; text-align: center; border: 1px solid var(--border); font-size: 13px; padding: 8px;">Decline</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <h4 style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Confirmed Passengers</h4>
+        {% for req in ride.confirmed_passengers %}
+        <div class="ride-row"
+            style="background: var(--surface); border-radius: var(--radius-md); margin-bottom: 8px; border: 1px solid var(--border);">
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <span class="material-icons-outlined" style="color: var(--google-green);">person</span>
                 <div style="font-weight: 500;">{{ req.rider.name }}</div>
             </div>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Pickup: {{
-                req.pickup_location }}</p>
-            <div style="display: flex; gap: 8px;">
-                <a href="{{ url_for('rides.manage_request', ride_id=ride.id, request_id=req.id, action='confirm') }}"
-                    class="btn-primary"
-                    style="flex: 1; text-align: center; background: var(--google-green); font-size: 13px; padding: 8px;">Accept</a>
-                <a href="{{ url_for('rides.manage_request', ride_id=ride.id, request_id=req.id, action='reject') }}"
-                    class="nav-link"
-                    style="flex: 1; text-align: center; border: 1px solid var(--border); font-size: 13px; padding: 8px;">Decline</a>
-            </div>
+            <span class="action-sub"
+                style="color: var(--google-green); background: #e6f4ea; padding: 2px 8px; border-radius: 12px; font-size: 11px;">Confirmed</span>
         </div>
+        {% else %}
+        <p style="font-size: 13px; color: var(--text-secondary); text-align: center; padding: 12px;">No passengers
+            confirmed yet.</p>
         {% endfor %}
-    </div>
-    {% endif %}
 
-    {% for req in ride.confirmed_passengers %}
-    <div class="ride-row" style="background: white; border-radius: var(--radius-md); margin-bottom: 8px;">
-        <div style="display: flex; gap: 12px; align-items: center;">
-            <span class="material-icons-outlined" style="color: var(--google-green);">person</span>
-            <div style="font-weight: 500;">{{ req.rider.name }}</div>
+        {% else %}
+        <!-- RIDER VIEW: Status or Request to Join -->
+        {% if user_request %}
+        <div class="card"
+            style="text-align: center; background: var(--primary-light); border-color: var(--primary); margin-bottom: 24px;">
+            <span class="material-icons-outlined" style="font-size: 32px; color: var(--primary); margin-bottom: 12px;">
+                {% if user_request.status == 'pending' %}hourglass_empty{% else %}check_circle{% endif %}
+            </span>
+            <h3 style="font-size: 18px; margin-bottom: 8px;">Request {{ user_request.status | title }}</h3>
+            <p style="font-size: 14px; color: var(--text-secondary);">
+                {% if user_request.status == 'pending' %}The host will review your request shortly.{% else %}You're all
+                set! Be ready at your pickup point.{% endif %}
+            </p>
+            {% if user_request.status == 'pending' %}
+            <a href="{{ url_for('rides.cancel_request', ride_id=ride.id) }}"
+                style="display: inline-block; margin-top: 16px; color: var(--google-red); font-size: 13px;">Cancel
+                Request</a>
+            {% endif %}
         </div>
-        <span class="action-sub">Confirmed</span>
+        {% elif ride.seats_available > 0 and ride.status == 'confirmed' %}
+        <div class="card" style="margin-bottom: 24px;">
+            <h3 style="font-size: 16px; margin-bottom: 16px;">Request to Join</h3>
+            <form method="POST" action="{{ url_for('rides.request_ride', ride_id=ride.id) }}">
+                <div class="form-group">
+                    <input type="text" name="pickup_location" placeholder="Where should we pick you up?" required>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Enter a clear landmark or
+                        area</p>
+                </div>
+                <div class="form-group">
+                    <textarea name="message" rows="2" placeholder="Message to host (optional)"
+                        style="font-size: 14px;"></textarea>
+                </div>
+                <button type="submit" class="btn-form-submit" style="border-radius: var(--radius-full);">Send Join
+                    Request</button>
+            </form>
+        </div>
+        {% endif %}
+        {% endif %}
     </div>
-    {% endfor %}
 
-    {% endif %}
-
-    <!-- Chat Section for both Host and Confirmed Rider -->
+    <!-- SHARED SECTION: Chat (Visible to host or confirmed riders) -->
     {% if current_user.id == ride.host_id or (user_request and user_request.status == 'confirmed') %}
     <div style="margin-top: 40px;">
         <h3 style="font-size: 16px; margin-bottom: 16px;">Ride Chat</h3>
@@ -142,7 +188,7 @@
                         {% if msg.sender_id == current_user.id %}
                             align-self: flex-end; background: var(--primary); color: white;
                         {% else %}
-                            align-self: flex-start; background: var(--surface); color: var(--text-primary);
+                            align-self: flex-start; background: var(--surface); color: var(--text-primary); border: 1px solid var(--border);
                         {% endif %}">
                     <div style="font-size: 10px; margin-bottom: 2px; opacity: 0.8;">{{ msg.sender.name }}</div>
                     {{ msg.content }}
@@ -163,54 +209,16 @@
     </div>
     {% endif %}
 
-    <div style="margin-top: 32px;">
+    <!-- FINAL ACTIONS: Mark Completed/Cancel (Host Only) -->
+    <div style="margin-top: 32px; padding-bottom: 40px;">
         {% if current_user.id == ride.host_id and ride.status == 'confirmed' %}
         <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='completed') }}" class="btn-primary"
-            style="display: block; text-align: center; margin-bottom: 12px;">Mark as Completed</a>
+            style="display: block; text-align: center; margin-bottom: 12px; background: var(--primary);">Mark as
+            Completed</a>
         <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='cancelled') }}"
             style="display: block; text-align: center; color: var(--google-red);">Cancel Ride</a>
         {% endif %}
     </div>
-
-    {% else %}
-    <!-- Rider View Section -->
-    {% if user_request %}
-    <div class="card" style="text-align: center; background: var(--primary-light); border-color: var(--primary);">
-        <span class="material-icons-outlined" style="font-size: 32px; color: var(--primary); margin-bottom: 12px;">
-            {% if user_request.status == 'pending' %}hourglass_empty{% else %}check_circle{% endif %}
-        </span>
-        <h3 style="font-size: 18px; margin-bottom: 8px;">Request {{ user_request.status | title }}</h3>
-        <p style="font-size: 14px; color: var(--text-secondary);">
-            {% if user_request.status == 'pending' %}The host will review your request shortly.{% else %}You're all set!
-            Be ready at your pickup point.{% endif %}
-        </p>
-        {% if user_request.status == 'pending' %}
-        <a href="{{ url_for('rides.cancel_request', ride_id=ride.id) }}"
-            style="display: inline-block; margin-top: 16px; color: var(--google-red); font-size: 13px;">Cancel
-            Request</a>
-        {% endif %}
-    </div>
-    {% elif ride.seats_available > 0 and ride.status == 'confirmed' %}
-    <div class="card">
-        <h3 style="font-size: 16px; margin-bottom: 16px;">Request to Join</h3>
-        <form method="POST" action="{{ url_for('rides.request_ride', ride_id=ride.id) }}">
-            <div class="form-group">
-                <input type="text" name="pickup_location" placeholder="Where should we pick you up?" required>
-                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Enter a clear landmark or
-                    area</p>
-            </div>
-            <div class="form-group">
-                <textarea name="message" rows="2" placeholder="Message to host (optional)"
-                    style="font-size: 14px;"></textarea>
-            </div>
-            <button type="submit" class="btn-form-submit" style="border-radius: var(--radius-full);">Send Join
-                Request</button>
-            <p style="text-align: center; font-size: 12px; color: var(--text-secondary); margin-top: 16px;">By
-                requesting, you agree to split fuel costs as shown above.</p>
-        </form>
-    </div>
-    {% endif %}
-    {% endif %}
 
 </div>
 
