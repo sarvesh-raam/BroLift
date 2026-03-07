@@ -39,7 +39,7 @@
     <h2 class="section-title" style="font-size: 18px; margin-bottom: 12px;">Active Rides</h2>
     {% for ride in active %}
     <a href="{{ url_for('rides.ride_detail', ride_id=ride.id) }}" class="ride-row"
-        style="background: var(--primary-light); border-color: var(--primary);">
+        style="background: var(--primary-light); border-color: var(--primary); color: var(--text-primary);">
         <div style="display: flex; align-items: center; gap: 12px;">
             <span class="material-icons-outlined" style="color: var(--primary);">electric_car</span>
             <div>
@@ -53,9 +53,9 @@
     {% endfor %}
     {% for req in my_rides %}
     <a href="{{ url_for('rides.ride_detail', ride_id=req.ride_id) }}" class="ride-row"
-        style="background: #e6f4ea; border-color: #1e8e3e;">
+        style="background: var(--google-green-light); border-color: var(--google-green); color: var(--text-primary);">
         <div style="display: flex; align-items: center; gap: 12px;">
-            <span class="material-icons-outlined" style="color: #1e8e3e;">check_circle</span>
+            <span class="material-icons-outlined" style="color: var(--google-green);">check_circle</span>
             <div>
                 <div class="action-title" style="margin: 0;">Ride Confirmed</div>
                 <div class="action-sub">{{ req.ride.departure_time.strftime('%I:%M %p') }} · {{ req.ride.host.name }}
