@@ -20,6 +20,7 @@
     --radius-lg: 12px;
     --radius-xl: 24px;
     --radius-full: 99px;
+    --google-green-light: #e6f4ea;
 }
 
 [data-theme="dark"] {
@@ -31,6 +32,7 @@
     --text-primary: #e8eaed;
     --text-secondary: #9aa0a6;
     --primary-light: rgba(26, 115, 232, 0.15);
+    --google-green-light: rgba(30, 142, 62, 0.2);
 }
 
 * {
