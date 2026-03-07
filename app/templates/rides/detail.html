@@ -120,7 +120,16 @@
         </div>
         {% endif %}
 
-        <h4 style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Confirmed Passengers</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="font-size: 13px; color: var(--text-secondary); margin: 0;">Confirmed Passengers</h4>
+            {% if ride.confirmed_passengers %}
+            <a href="https://www.google.com/maps/dir/?api=1&origin={{ ride.start_lat }},{{ ride.start_lng }}&destination={{ college_lat }},{{ college_lng }}&waypoints={% for req in ride.confirmed_passengers %}{{ req.pickup_lat }},{{ req.pickup_lng }}{% if not loop.last %}|{% endif %}{% endfor %}"
+                target="_blank"
+                style="color: var(--google-blue); font-size: 12px; text-decoration: none; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                <span class="material-icons-outlined" style="font-size: 16px;">map</span> Full Route
+            </a>
+            {% endif %}
+        </div>
         {% for req in ride.confirmed_passengers %}
         <div class="ride-row"
             style="background: var(--surface); border-radius: var(--radius-md); margin-bottom: 8px; border: 1px solid var(--border);">
@@ -128,8 +137,15 @@
                 <span class="material-icons-outlined" style="color: var(--google-green);">person</span>
                 <div style="font-weight: 500;">{{ req.rider.name }}</div>
             </div>
-            <span class="action-sub"
-                style="color: var(--google-green); background: #e6f4ea; padding: 2px 8px; border-radius: 12px; font-size: 11px;">Confirmed</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <a href="https://www.google.com/maps/dir/?api=1&destination={{ req.pickup_lat }},{{ req.pickup_lng }}"
+                    target="_blank" class="action-sub"
+                    style="color: var(--primary); background: var(--primary-light); padding: 4px 10px; border-radius: 12px; font-size: 11px; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                    <span class="material-icons-outlined" style="font-size: 14px;">directions</span> Navigate
+                </a>
+                <span class="action-sub"
+                    style="color: var(--google-green); background: #e6f4ea; padding: 4px 10px; border-radius: 12px; font-size: 11px;">Confirmed</span>
+            </div>
         </div>
         {% else %}
         <p style="font-size: 13px; color: var(--text-secondary); text-align: center; padding: 12px;">No passengers
@@ -262,6 +278,8 @@
 
         // Autocomplete for Join Request
         var pickupInput = document.getElementById('pickup-input');
+        var pickupMarker = null;
+
         if (pickupInput) {
             var autocomplete = new google.maps.places.Autocomplete(pickupInput, {
                 componentRestrictions: { country: 'in' },
@@ -272,8 +290,28 @@
                 var place = autocomplete.getPlace();
                 if (!place.geometry) return;
 
-                document.getElementById('pickup-lat').value = place.geometry.location.lat();
-                document.getElementById('pickup-lng').value = place.geometry.location.lng();
+                var lat = place.geometry.location.lat();
+                var lng = place.geometry.location.lng();
+
+                document.getElementById('pickup-lat').value = lat;
+                document.getElementById('pickup-lng').value = lng;
+
+                // Add character 'C' marker
+                if (pickupMarker) pickupMarker.setMap(null);
+                pickupMarker = new google.maps.Marker({
+                    position: { lat: lat, lng: lng },
+                    map: map,
+                    label: { text: 'C', color: 'white' },
+                    animation: google.maps.Animation.DROP,
+                    title: "Your Pickup Point"
+                });
+
+                // Adjust map bounds to show Start, College and the new point C
+                var bounds = new google.maps.LatLngBounds();
+                bounds.extend({ lat: START_LAT, lng: START_LNG });
+                bounds.extend({ lat: COLLEGE_LAT, lng: COLLEGE_LNG });
+                bounds.extend({ lat: lat, lng: lng });
+                map.fitBounds(bounds);
             });
         }
     }
