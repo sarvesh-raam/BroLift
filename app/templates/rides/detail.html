@@ -250,6 +250,9 @@
     var COLLEGE_LNG = {{ college_lng }};
     var START_LAT = {{ ride.start_lat if ride.start_lat else college_lat }};
     var START_LNG = {{ ride.start_lng if ride.start_lng else college_lng }};
+    var USER_PICKUP_LAT = {{ user_request.pickup_lat if user_request and user_request.pickup_lat else 'null' }};
+    var USER_PICKUP_LNG = {{ user_request.pickup_lng if user_request and user_request.pickup_lng else 'null' }};
+    var waypoints = {{ waypoints_json| safe if waypoints_json else '[]' }};
 
     function initDetailMap() {
         var map = new google.maps.Map(document.getElementById('detail-map'), {
@@ -276,9 +279,39 @@
             if (status === 'OK') dr.setDirections(res);
         });
 
+        var pickupMarker = null;
+
+        // Plot existing pickup point if user has a request
+        if (USER_PICKUP_LAT && USER_PICKUP_LNG) {
+            pickupMarker = new google.maps.Marker({
+                position: { lat: USER_PICKUP_LAT, lng: USER_PICKUP_LNG },
+                map: map,
+                label: { text: 'C', color: 'white' },
+                title: "Your Pickup Point"
+            });
+
+            // Adjust bounds to include pickup point C
+            var bounds = new google.maps.LatLngBounds();
+            bounds.extend({ lat: START_LAT, lng: START_LNG });
+            bounds.extend({ lat: COLLEGE_LAT, lng: COLLEGE_LNG });
+            bounds.extend({ lat: USER_PICKUP_LAT, lng: USER_PICKUP_LNG });
+            map.fitBounds(bounds);
+        }
+
+        // Plot confirmed passenger waypoints for host
+        if (waypoints && waypoints.length > 0) {
+            waypoints.forEach(function (wp) {
+                new google.maps.Marker({
+                    position: { lat: wp.lat, lng: wp.lng },
+                    map: map,
+                    icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                    title: wp.name + "'s Pickup"
+                });
+            });
+        }
+
         // Autocomplete for Join Request
         var pickupInput = document.getElementById('pickup-input');
-        var pickupMarker = null;
 
         if (pickupInput) {
             var autocomplete = new google.maps.places.Autocomplete(pickupInput, {
