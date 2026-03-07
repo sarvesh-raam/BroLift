@@ -160,7 +160,10 @@
             <h3 style="font-size: 16px; margin-bottom: 16px;">Request to Join</h3>
             <form method="POST" action="{{ url_for('rides.request_ride', ride_id=ride.id) }}">
                 <div class="form-group">
-                    <input type="text" name="pickup_location" placeholder="Where should we pick you up?" required>
+                    <input type="text" id="pickup-input" name="pickup_location"
+                        placeholder="Where should we pick you up?" required>
+                    <input type="hidden" id="pickup-lat" name="pickup_lat">
+                    <input type="hidden" id="pickup-lng" name="pickup_lng">
                     <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Enter a clear landmark or
                         area</p>
                 </div>
@@ -190,7 +193,11 @@
                         {% else %}
                             align-self: flex-start; background: var(--surface); color: var(--text-primary); border: 1px solid var(--border);
                         {% endif %}">
-                    <div style="font-size: 10px; margin-bottom: 2px; opacity: 0.8;">{{ msg.sender.name }}</div>
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 10px; margin-bottom: 2px; opacity: 0.8;">
+                        <span style="font-weight: 600;">{{ msg.sender.name }}</span>
+                        <span>{{ msg.timestamp.strftime('%I:%M %p') }}</span>
+                    </div>
                     {{ msg.content }}
                 </div>
                 {% else %}
@@ -252,6 +259,23 @@
         }, function (res, status) {
             if (status === 'OK') dr.setDirections(res);
         });
+
+        // Autocomplete for Join Request
+        var pickupInput = document.getElementById('pickup-input');
+        if (pickupInput) {
+            var autocomplete = new google.maps.places.Autocomplete(pickupInput, {
+                componentRestrictions: { country: 'in' },
+                fields: ['geometry', 'name', 'formatted_address']
+            });
+
+            autocomplete.addListener('place_changed', function () {
+                var place = autocomplete.getPlace();
+                if (!place.geometry) return;
+
+                document.getElementById('pickup-lat').value = place.geometry.location.lat();
+                document.getElementById('pickup-lng').value = place.geometry.location.lng();
+            });
+        }
     }
 </script>
 {% endblock %}
