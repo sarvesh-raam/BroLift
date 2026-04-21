@@ -10,6 +10,8 @@ def process(filepath):
     content = content.replace("final readme polish and feature highlights", "refine documentation and features")
     content = content.replace("robust refactor of detail.html conditional logic to eliminate jinja2 templatesyntaxerrors permanently", "fix detail.html logic and jinja errors")
     content = content.replace("enhanced dark mode & fixed map routing/calculation. added premium night mode styles for google maps, fixed real-time cost calculation on host page, and improved route visibility with high-contrast polyline", "improve dark mode and map routing")
+    content = content.replace("add license, github actions ci, mermaid architecture diagram, and pin dependencies", "setup license, ci, and dependencies")
+    content = content.replace("add production dependencies for render", "configure production environment")
     
     # ensure lowercase and no emojis (just in case)
     lines = content.split('\n')
