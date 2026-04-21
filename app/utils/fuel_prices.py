@@ -71,7 +71,7 @@ def _scrape_price(url: str, label: str) -> float | None:
 
 def _do_fetch():
     """Background fetch — updates global cache in-place."""
-    global _last_fetch_time, _meta
+    global _last_fetch_time
     sources = {
         'petrol': 'https://www.goodreturns.in/petrol-price-in-chennai.html',
         'diesel': 'https://www.goodreturns.in/diesel-price-in-chennai.html',
@@ -97,7 +97,7 @@ def _do_fetch():
 
 def get_fuel_prices() -> dict:
     """Return current fuel prices dict, auto-refreshing every 6 hours."""
-    global _last_fetch_time
+    # _last_fetch_time is only read here
     should_fetch = (
         _last_fetch_time is None or
         datetime.now() - _last_fetch_time > _CACHE_TTL

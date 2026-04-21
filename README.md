@@ -1,4 +1,4 @@
-# 🚗 BroLift: Smart College Carpooling Network
+# BroLift: Smart College Carpooling Network
 
 A high-performance system for academic commute coordination. It cross-references student verification with real-time routing to optimize campus transport and reduce structural inefficiencies in college transit.
 
@@ -11,8 +11,8 @@ A high-performance system for academic commute coordination. It cross-references
 ## Executive Summary
 BroLift (Autonomous Ride Intelligence) provides high-fidelity carpooling coordination. The system automates the matching of student drivers and passengers within a verified network by integrating Google Maps routing and deterministic fuel-cost inference models.
 
-👉 **Optimized for low-latency responses, generating route calculations within milliseconds.**
-👉 **Designed as a scalable full-stack system capable of handling real-time ride tracking with optimized passenger matching.**
+* **Optimized for low-latency responses, generating route calculations within milliseconds.**
+* **Designed as a scalable full-stack system capable of handling real-time ride tracking with optimized passenger matching.**
 
 ## Interface Preview
 
