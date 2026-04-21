@@ -62,6 +62,8 @@ class Ride(db.Model):
     fuel_type       = db.Column(db.String(10), default='petrol')
     status          = db.Column(db.String(20), default='confirmed')
     passenger_preference = db.Column(db.String(20), default='any') # any / female_only
+    other_charges   = db.Column(db.Float, default=0.0)    # tolls, parking etc.
+    max_wait_time   = db.Column(db.Integer, default=5)    # minutes
     notes           = db.Column(db.Text)
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -83,11 +85,11 @@ class Ride(db.Model):
     @property
     def cost_per_person(self):
         """
-        Split total fuel cost equally between host + ALL offered seats.
-        This gives a fixed estimated share regardless of how many have joined.
+        Split total cost (fuel + tolls/other) equally between host + ALL offered seats.
         """
-        if self.total_fuel_cost and self.total_fuel_cost > 0:
-            return round(self.total_fuel_cost / (self.available_seats + 1), 2)
+        total = (self.total_fuel_cost or 0.0) + (self.other_charges or 0.0)
+        if total > 0:
+            return round(total / (self.available_seats + 1), 2)
         return 0.0
 
     def __repr__(self): return f'<Ride {self.id}>'
