@@ -1,24 +1,211 @@
 {% extends "base.html" %}
 {% block title %}Host a Ride — BroLift{% endblock %}
 {% block extra_head %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/light.css">
+<!-- Modern Flatpickr base -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script>
-    function loadMapsScript() {
-        var s = document.createElement('script');
-        s.src = 'https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initHostMap';
-        s.async = true; s.defer = true;
-        document.head.appendChild(s);
+<style>
+    /* Material V3 Aesthetic - Zero Grid Lines */
+    .flatpickr-calendar {
+        background: var(--card-bg) !important;
+        border-radius: 28px !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        border: 1px solid var(--border) !important;
+        padding: 16px !important;
+        width: 310px !important;
+        animation: pickerEntry 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    window.addEventListener('load', loadMapsScript);
-</script>
+
+    [data-theme="dark"] .flatpickr-calendar {
+        background: #1e2124 !important;
+        border-color: #313338 !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    @keyframes pickerEntry {
+        from {
+            opacity: 0;
+            transform: scale(0.9) translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+
+    /* KILL THE GRID LINES */
+    .flatpickr-days,
+    .dayContainer,
+    .flatpickr-day {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    .flatpickr-day {
+        border-radius: 14px !important;
+        margin: 2px !important;
+        height: 38px !important;
+        line-height: 38px !important;
+        font-weight: 500 !important;
+    }
+
+    .flatpickr-day.selected {
+        background: var(--primary) !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4) !important;
+    }
+
+    .flatpickr-day:hover {
+        background: var(--primary-light) !important;
+        color: var(--primary) !important;
+    }
+
+    [data-theme="dark"] .flatpickr-day {
+        color: #e8eaed !important;
+    }
+
+    [data-theme="dark"] .flatpickr-day:hover {
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .flatpickr-weekday {
+        color: var(--text-secondary) !important;
+        font-weight: 500 !important;
+    }
+
+    .flatpickr-current-month {
+        font-size: 16px !important;
+        font-weight: 600 !important;
+    }
+
+    /* Dropdown and NumInput refinements */
+    .flatpickr-current-month .flatpickr-monthDropdown-months {
+        appearance: none;
+        -moz-appearance: none;
+        -webkit-appearance: none;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 4px 8px !important;
+        color: var(--text-primary) !important;
+        font-weight: 600 !important;
+        outline: none !important;
+        cursor: pointer !important;
+        transition: 0.2s;
+    }
+    .flatpickr-current-month .flatpickr-monthDropdown-months:hover {
+        background: var(--surface) !important;
+    }
+    .flatpickr-current-month .flatpickr-monthDropdown-months option {
+        background: var(--card-bg) !important;
+        color: var(--text-primary) !important;
+    }
+    
+    .numInputWrapper {
+        border-radius: 8px !important;
+        transition: 0.2s;
+    }
+    .numInputWrapper:hover {
+        background: var(--surface) !important;
+    }
+    .numInputWrapper span {
+        display: none !important; /* Hide arrows for a cleaner look */
+    }
+    
+    .flatpickr-current-month .numInputWrapper {
+        width: 6ch !important;
+    }
+
+    /* Time Picker Fixes */
+    .flatpickr-time {
+        border-top: 1px solid var(--border) !important;
+        margin-top: 12px !important;
+        padding-top: 8px !important;
+        height: 50px !important;
+        line-height: 40px !important;
+        max-height: 50px !important;
+    }
+
+    .flatpickr-time input {
+        color: var(--text-primary) !important;
+        font-size: 18px !important;
+        font-weight: 600 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        text-align: center !important;
+    }
+
+    .flatpickr-time .flatpickr-am-pm {
+        color: var(--text-primary) !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        cursor: pointer !important;
+        border-radius: 8px !important;
+        transition: 0.2s;
+    }
+    
+    .flatpickr-time .flatpickr-am-pm:hover {
+        background: var(--surface) !important;
+    }
+
+    /* Input Styling Refinement */
+    .form-group input {
+        border-radius: 18px !important;
+        border: 2px solid var(--border) !important;
+        height: 56px !important;
+        padding-left: 54px !important;
+        font-size: 15px !important;
+        background: var(--surface) !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .form-group input:focus {
+        border-color: var(--primary) !important;
+        background: var(--card-bg) !important;
+        box-shadow: 0 0 0 4px var(--primary-light) !important;
+    }
+
+    /* Icon Precision */
+    .form-group .material-icons-outlined {
+        position: absolute;
+        left: 18px !important;
+        top: 39px !important;
+        font-size: 24px !important;
+        color: var(--text-secondary);
+        z-index: 10 !important;
+        pointer-events: none !important;
+    }
+
+    .form-group:focus-within .material-icons-outlined {
+        color: var(--primary) !important;
+    }
+
+    .selection-preview-pill {
+        background: var(--primary-light);
+        color: var(--primary);
+        padding: 4px 12px;
+        border-radius: 99px;
+        font-size: 13px;
+        font-weight: 600;
+        display: inline-block;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="container" style="max-width: 600px;">
-    <div style="margin-bottom: 32px;">
-        <h1 style="font-size: 24px; font-weight: 500;">Offer a Ride</h1>
-        <p style="color: var(--text-secondary); font-size: 14px;">Share your commute and split fuel costs</p>
+    <div style="margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+            <h1 style="font-size: 24px; font-weight: 500;">Offer a Ride</h1>
+            <p style="color: var(--text-secondary); font-size: 14px;">Share your commute and split fuel costs</p>
+        </div>
+        <div id="greeting-badge"
+            style="padding: 6px 12px; border-radius: 20px; background: var(--primary-light); color: var(--primary); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+            Safe Travels!
+        </div>
     </div>
 
     {% if errors %}
@@ -60,44 +247,72 @@
             </div>
 
             <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-                <div class="form-group" style="flex: 2;">
-                    <label>Departure Time</label>
-                    <input type="text" id="departure_display" placeholder="Pick date & time" required>
-                    <input type="hidden" id="departure_time" name="departure_time"
-                        value="{{ form_data.get('departure_time', '') }}">
+                <div class="form-group" style="flex: 1.5; position: relative;">
+                    <label>Departure Date</label>
+                    <input type="text" id="date_display" placeholder="Select Date" required class="datepicker-input">
+                    <span class="material-icons-outlined"
+                        style="position: absolute; left: 12px; top: 38px; font-size: 20px; color: var(--text-secondary);">calendar_today</span>
                 </div>
-                <div class="form-group" style="flex: 2;">
-                    <label>Seats Available</label>
-                    <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
-                        {% set vcap = current_user.vehicle_capacity or 5 %}
-                        {% for i in range(1, vcap) %}
-                        <label style="cursor: pointer;">
-                            <input type="radio" name="available_seats" value="{{ i }}" style="display: none;" {% if
-                                (form_data.get('available_seats')|int==i) or (not form_data.get('available_seats') and
-                                i==1) %}checked{% endif %} onchange="updateCost()">
-                            <div class="chip-ui"
-                                style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 14px; transition: 0.2s;">
-                                {{ i }}</div>
-                        </label>
-                        {% endfor %}
-                    </div>
+                <div class="form-group" style="flex: 1; position: relative;">
+                    <label>Time</label>
+                    <input type="text" id="time_display" placeholder="Set Time" required class="timepicker-input">
+                    <span class="material-icons-outlined"
+                        style="position: absolute; left: 12px; top: 38px; font-size: 20px; color: var(--text-secondary);">schedule</span>
+                </div>
+                <input type="hidden" id="departure_time" name="departure_time"
+                    value="{{ form_data.get('departure_time', '') }}">
+            </div>
+            <div class="form-group" style="padding-top: 4px;">
+                <label>Seats Available</label>
+                <div style="display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
+                    {% set vcap = current_user.vehicle_capacity or 5 %}
+                    {% for i in range(1, vcap) %}
+                    <label style="cursor: pointer;">
+                        <input type="radio" name="available_seats" value="{{ i }}" style="display: none;" {% if
+                            (form_data.get('available_seats')|int==i) or (not form_data.get('available_seats') and i==1)
+                            %}checked{% endif %} onchange="updateCost()">
+                        <div class="chip-ui"
+                            style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 14px; transition: 0.2s;">
+                            {{ i }}</div>
+                    </label>
+                    {% endfor %}
                 </div>
             </div>
+        </div>
 
-            <!-- Route Preview Map -->
-            <div id="host-map"
-                style="width: 100%; height: 320px; border-radius: var(--radius-md); margin-top: 8px; background: #f0f0f0; border: 1px solid var(--border); overflow: hidden;">
-            </div>
+        <!-- Route Preview Map -->
+        <div id="host-map"
+            style="width: 100%; height: 320px; border-radius: var(--radius-md); margin-top: 8px; background: #f0f0f0; border: 1px solid var(--border); overflow: hidden;">
+        </div>
 
-            <div id="distance-info"
-                style="margin-top: 16px; padding: 12px; border-radius: var(--radius-md); background: var(--primary-light); display: none; align-items: center; gap: 12px;">
-                <span class="material-icons-outlined" style="color: var(--primary);">directions_car</span>
+        <div id="distance-info"
+            style="margin-top: 16px; padding: 16px; border-radius: var(--radius-md); background: var(--bg); border: 1px solid var(--border); display: none; flex-direction: column; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div
+                    style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; animation: float 3s ease-in-out infinite;">
+                    <span class="material-icons-outlined" style="color: var(--primary);">{% if
+                        current_user.vehicle_type == 'bike' %}directions_bike{% else %}directions_car{% endif
+                        %}</span>
+                </div>
                 <div>
                     <div
-                        style="font-size: 12px; font-weight: 500; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">
-                        ESTIMATED DISTANCE</div>
-                    <div id="route-status" style="font-size: 18px; font-weight: 600; color: var(--text-primary);">0.0 km
-                    </div>
+                        style="font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">
+                        Estimated Route</div>
+                    <div id="route-status" style="font-size: 16px; font-weight: 600;">Calculating...</div>
+                </div>
+            </div>
+            <!-- Mini Trip Card -->
+            <div id="trip-preview-card"
+                style="padding-top: 12px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 13px; color: var(--text-secondary);">
+                    <span class="material-icons-outlined"
+                        style="font-size: 14px; vertical-align: middle;">schedule</span>
+                    <span id="preview-time" style="vertical-align: middle;">Set time</span>
+                </div>
+                <div style="font-size: 13px; color: var(--text-secondary);">
+                    <span class="material-icons-outlined"
+                        style="font-size: 14px; vertical-align: middle;">payments</span>
+                    <span id="preview-cost" style="vertical-align: middle;">₹0</span>/person
                 </div>
             </div>
         </div>
@@ -141,29 +356,68 @@
                             Everyone</div>
                     </label>
                     <label style="flex: 1; cursor: pointer;">
+                        {% if current_user.gender == 'female' %}
                         <input type="radio" name="passenger_preference" value="female_only" style="display: none;"
                             onchange="updateCost()">
                         <div class="chip-ui"
                             style="text-align: center; border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-md); font-size: 13px;">
                             Girls Only</div>
+                        {% else %}
+                        <input type="radio" name="passenger_preference" value="male_only" style="display: none;"
+                            onchange="updateCost()">
+                        <div class="chip-ui"
+                            style="text-align: center; border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-md); font-size: 13px;">
+                            Boys Only</div>
+                        {% endif %}
                     </label>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 12px; align-items: flex-end;">
+            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
                 <div class="form-group" style="flex: 1;">
-                    <label>Total Est. Cost (₹)</label>
-                    <div style="position: relative;">
-                        <input type="number" id="fuel_cost" name="fuel_cost" placeholder="Waiting for route..."
-                            value="{{ form_data.get('fuel_cost', '') }}" readonly
-                            style="font-size: 18px; font-weight: 600; color: var(--primary); background: var(--surface);">
-                        <span id="cost-indicator" class="material-icons-outlined"
-                            style="position: absolute; right: 12px; top: 10px; font-size: 18px; color: var(--text-secondary); animation: pulse 2s infinite;">sync</span>
+                    <label>Tolls & Parking (₹)</label>
+                    <input type="number" id="other_charges" name="other_charges" value="0" min="0"
+                        oninput="updateCost()" style="margin-top: 8px;">
+                </div>
+                <div class="form-group" style="flex: 1.2;">
+                    <label>Max Wait Time</label>
+                    <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+                        {% for t in [5, 10, 15, 20] %}
+                        <label style="cursor: pointer;">
+                            <input type="radio" name="max_wait_time" value="{{ t }}" style="display: none;" {% if t==5
+                                %}checked{% endif %}>
+                            <div class="chip-ui"
+                                style="width: 48px; height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 13px; transition: 0.2s;">
+                                {{ t }}m</div>
+                        </label>
+                        {% endfor %}
                     </div>
                 </div>
-                <div style="flex: 1; padding-bottom: 20px; font-size: 13px; color: var(--text-secondary);">
-                    Split cost will be shown to riders automatically.
+            </div>
+
+            <div
+                style="background: var(--surface); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px; border: 1px dashed var(--border);">
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary);">Estimated Fuel:</span>
+                    <span id="fuel-breakdown">₹0</span>
                 </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary);">Tolls/Other:</span>
+                    <span id="toll-details"
+                        style="font-size: 11px; color: var(--text-secondary); margin-right: auto; margin-left: 8px;"></span>
+                    <span id="toll-breakdown">₹0</span>
+                </div>
+                <div
+                    style="display: flex; justify-content: space-between; font-weight: 600; font-size: 15px; padding-top: 8px; border-top: 1px solid var(--border);">
+                    <span>Total Estimated:</span>
+                    <span id="total-display" style="color: var(--primary);">₹0</span>
+                </div>
+                <input type="hidden" id="fuel_cost" name="fuel_cost" value="0">
+            </div>
+
+            <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.2; margin-bottom: 20px;">
+                <span style="color: var(--google-red); font-weight: 500;">Note:</span> Cost is split equally between you
+                and all offered seats. Keep it fair!
             </div>
         </div>
 
@@ -173,8 +427,8 @@
         </div>
 
         <button type="submit" class="btn-form-submit"
-            style="height: 52px; border-radius: var(--radius-full); font-weight: 500; font-size: 16px; margin-top: 8px;">Post
-            Ride</button>
+            style="height: 52px; border-radius: var(--radius-full); font-weight: 500; font-size: 16px; margin-top: 8px; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);">
+            Post Ride</button>
     </form>
 </div>
 
@@ -191,9 +445,47 @@
         border-color: var(--primary-light);
         background: var(--surface);
     }
+
+    @keyframes float {
+        0% {
+            transform: translateY(0px);
+        }
+
+        50% {
+            transform: translateY(-3px);
+        }
+
+        100% {
+            transform: translateY(0px);
+        }
+    }
+
+    .form-group input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px var(--primary-light);
+        transform: translateY(-1px);
+    }
+
+    .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:focus-within {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .chip-ui {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    .chip-ui:active {
+        transform: scale(0.92);
+    }
 </style>
 
 <script>
+    var VEHICLE_TYPE = "{{ current_user.vehicle_type or 'car' }}";
     var MILEAGE = Number("{{ current_user.vehicle_mileage or 15 }}");
     var FUEL_PRICES = { petrol: 102, diesel: 92, cng: 82, electric: 1.5 };
     var COLLEGE_LAT = Number("{{ college_lat or 12.8231 }}");
@@ -215,16 +507,65 @@
         { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] }
     ];
 
-    flatpickr('#departure_display', {
-        enableTime: true,
-        dateFormat: 'Y-m-dTH:i',
-        minDate: 'today',
-        theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
-        onChange: function (d, str) { document.getElementById('departure_time').value = str; }
+    let selectedDatePart = '';
+    let selectedTimePart = '';
+
+    function updateCombinedDateTime() {
+        if (selectedDatePart && selectedTimePart) {
+            const combined = selectedDatePart + 'T' + selectedTimePart;
+            document.getElementById('departure_time').value = combined;
+
+            // Update Preview Card Time
+            const previewTime = document.getElementById('preview-time');
+            if (previewTime) {
+                previewTime.textContent = selectedTimePart;
+            }
+        }
+    }
+
+    // Standard Flatpickr Initialization
+    flatpickr("#date_display", {
+        minDate: "today",
+        dateFormat: "D, M j, Y",
+        disableMobile: true,
+        onChange: function(selectedDates, dateStr, instance) {
+            if(selectedDates.length > 0) {
+                const d = selectedDates[0];
+                const tzOffset = d.getTimezoneOffset() * 60000;
+                const localISOTime = (new Date(d - tzOffset)).toISOString().slice(0, 10);
+                selectedDatePart = localISOTime;
+            }
+            updateCombinedDateTime();
+        }
     });
 
-    window.addEventListener('theme-changed', (e) => {
-        // Simple way to refresh flatpickr instance if needed, but primary focus is maps
+    flatpickr("#time_display", {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "h:i K",
+        disableMobile: true,
+        onChange: function(selectedDates, dateStr, instance) {
+            if(selectedDates.length > 0) {
+                const d = selectedDates[0];
+                let h = d.getHours().toString().padStart(2, '0');
+                let m = d.getMinutes().toString().padStart(2, '0');
+                selectedTimePart = `${h}:${m}`;
+                
+                const badge = document.getElementById('greeting-badge');
+                if (badge) {
+                    const hr = d.getHours();
+                    if (hr < 12) badge.textContent = "Morning Commute";
+                    else if (hr < 17) badge.textContent = "Afternoon Trip";
+                    else badge.textContent = "Evening Drive";
+                }
+                
+                const previewTime = document.getElementById('preview-time');
+                if (previewTime) {
+                    previewTime.textContent = dateStr;
+                }
+            }
+            updateCombinedDateTime();
+        }
     });
 
     var map;
@@ -236,10 +577,6 @@
         if (!mapDiv) return;
 
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const darkStyle = [
-            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-            { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-        ];
 
         map = new google.maps.Map(mapDiv, {
             center: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
@@ -257,19 +594,19 @@
             map: map,
             suppressMarkers: true,
             polylineOptions: {
-                strokeColor: '#FF9F43', // High contrast vibrant orange
+                strokeColor: '#FF9F43',
                 strokeWeight: 7,
                 strokeOpacity: 0.95
             }
         });
 
-        // SRM Marker
         new google.maps.Marker({
             position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
             map: map,
             icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
             title: 'SRM IST'
         });
+
         const startInput = document.getElementById('start_location');
         if (!startInput) return;
 
@@ -279,17 +616,14 @@
             if (place.geometry) {
                 updateLocationAndDistance(place.geometry.location);
             } else if (place.name) {
-                // User typed something and pressed enter without selecting
                 geocodeFromInput();
             }
         });
 
-        // Add click listener to map
         map.addListener('click', function (e) {
             updateLocationAndDistance(e.latLng, true);
         });
 
-        // Add Enter key listener to input
         startInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -340,7 +674,7 @@
         const costInd = document.getElementById('cost-indicator');
 
         if (infoEl) infoEl.style.display = 'flex';
-        if (statusEl) statusEl.textContent = '⏱️ Calculating...';
+        if (statusEl) statusEl.textContent = 'Calculating...';
         if (costInd) costInd.style.display = 'block';
 
         var ds = new google.maps.DirectionsService();
@@ -353,13 +687,46 @@
                 const leg = res.routes[0].legs[0];
                 const dist = leg.distance.value / 1000;
                 document.getElementById('distance_km').value = dist.toFixed(1);
+
+                // Smart Toll Detection
+                let tollCount = 0;
+                leg.steps.forEach(step => {
+                    if (step.instructions.toLowerCase().includes('toll road')) {
+                        tollCount++;
+                    }
+                });
+
+                // Check route-level warnings too
+                res.routes[0].warnings.forEach(warn => {
+                    if (warn.toLowerCase().includes('tolls')) tollCount = Math.max(tollCount, 1);
+                });
+
+                if (tollCount > 0) {
+                    const unitPrice = (VEHICLE_TYPE === 'bike') ? 0 : 65;
+                    const estimatedTolls = tollCount * unitPrice;
+                    document.getElementById('other_charges').value = estimatedTolls;
+
+                    let tollText = tollCount + ' Toll' + (tollCount > 1 ? 's' : '');
+                    if (VEHICLE_TYPE === 'bike') {
+                        tollText += ' (Free for Bikes)';
+                        if (statusEl) statusEl.innerHTML = dist.toFixed(1) + ' km to SRM <span style="color: var(--google-green); font-size: 11px; margin-left: 8px;"> Toll Free Path</span>';
+                    } else {
+                        tollText += ' (₹' + unitPrice + ' each)';
+                        if (statusEl) statusEl.innerHTML = dist.toFixed(1) + ' km to SRM <span style="color: var(--google-yellow); font-size: 11px; margin-left: 8px;"> ' + tollText + '</span>';
+                    }
+                    document.getElementById('toll-details').textContent = tollText;
+                } else {
+                    document.getElementById('other_charges').value = 0;
+                    document.getElementById('toll-details').textContent = '';
+                    if (statusEl) statusEl.textContent = dist.toFixed(1) + ' km to SRM';
+                }
+
                 directionsRenderer.setDirections(res);
-                if (statusEl) statusEl.textContent = dist.toFixed(1) + ' km to SRM';
                 if (costInd) costInd.style.display = 'none';
                 updateCost();
             } else {
                 console.error('Directions request failed:', status);
-                if (statusEl) statusEl.textContent = '❌ No route found';
+                if (statusEl) statusEl.textContent = 'No route found';
                 if (costInd) costInd.style.display = 'none';
                 updateCost(); // Reset to 0
             }
@@ -369,49 +736,52 @@
     function updateCost() {
         const distEl = document.getElementById('distance_km');
         const mileageEl = document.getElementById('mileage_input');
+        const otherEl = document.getElementById('other_charges');
         const costEl = document.getElementById('fuel_cost');
         if (!distEl || !mileageEl || !costEl) return;
 
         const dist = parseFloat(distEl.value) || 0;
         const mileage = parseFloat(mileageEl.value) || 15;
+        const other = parseFloat(otherEl.value) || 0;
         const ftEl = document.querySelector('input[name="fuel_type"]:checked');
         const ft = ftEl ? ftEl.value : 'petrol';
 
         console.log('Calculating cost:', { dist, mileage, ft });
 
-        let cost = 0;
+        let fuelCost = 0;
         if (ft === 'electric') {
-            cost = dist * 2;
+            fuelCost = dist * 2;
         } else {
-            cost = (dist / mileage) * (FUEL_PRICES[ft] || 102);
+            fuelCost = (dist / mileage) * (FUEL_PRICES[ft] || 102);
         }
 
-        costEl.value = Math.ceil(cost);
-        console.log('Final cost target:', costEl.value);
+        const fuel = Math.ceil(fuelCost);
+        const total = fuel + other;
+
+        // Update hidden field for form submission
+        costEl.value = fuel;
+
+        // Update UI breakdown
+        document.getElementById('fuel-breakdown').textContent = '₹' + fuel;
+        if (document.getElementById('toll-breakdown')) {
+            document.getElementById('toll-breakdown').textContent = '₹' + other;
+        }
+        document.getElementById('total-display').textContent = '₹' + total;
+
+        // Trip Preview Card Update
+        const seats = parseInt(document.querySelector('input[name="available_seats"]:checked')?.value || 1);
+        const perPerson = Math.ceil(total / (seats + 1));
+        document.getElementById('preview-cost').textContent = '₹' + perPerson;
     }
 
     function updateFuelUI(el) { updateCost(); }
 
-    // Initial calculation
-    window.addEventListener('load', updateCost);
-
-    // Auto-calculate on load if values exist
-    window.addEventListener('load', function () {
-        setTimeout(() => {
-            const startLoc = document.getElementById('start_location').value;
-            const latEl = document.getElementById('start_lat');
-            const lngEl = document.getElementById('start_lng');
-
-            if (latEl.value && lngEl.value) {
-                const lat = parseFloat(latEl.value);
-                const lng = parseFloat(lngEl.value);
-                updateLocationAndDistance(new google.maps.LatLng(lat, lng));
-            } else if (startLoc) {
-                geocodeFromInput();
-            } else {
-                updateCost();
-            }
-        }, 1200); // Wait for Maps API to fully init
-    });
+    function loadMapsScript() {
+        var s = document.createElement('script');
+        s.src = 'https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initHostMap';
+        s.async = true; s.defer = true;
+        document.head.appendChild(s);
+    }
+    window.addEventListener('load', loadMapsScript);
 </script>
 {% endblock %}
