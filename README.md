@@ -61,9 +61,31 @@ To run tests locally:
 python -X utf8 test_app.py
 ```
 
----
+- **Frontend Interface**: HTML5, Vanilla CSS, and Vanilla JavaScript for responsive interactions.
+- **Backend Logic**: Python and Flask.
+- **Database Layer**: SQLite (development) / PostgreSQL (production) with SQLAlchemy ORM.
+- **External Integrations**: Google Maps JavaScript API, Places API, and Directions API for route calculation and address resolution.
 
-## 🚀 Getting Started
+## Core Features
+- **Academic Verification**: Strict registration flow allowing only verified `.edu` email addresses.
+- **Ride Hosting**: Users can schedule departures, set available capacity (up to 4 passengers), and define route parameters.
+- **Intelligent Discovery**: Search functionality based on proximity to pickup zones and departure windows.
+- **Automated Financials**: Fair cost division calculated automatically among the host and all confirmed passengers.
+- **Real-time Routing**: Integration with Google Maps for precise route visualization and tracking.
+
+## Technical Structure
+```text
+app/
+├── __init__.py          # App factory initialization
+├── models.py            # Relational models (User, Ride, Request)
+├── routes/
+│   ├── auth.py          # Authentication and session logic
+│   ├── rides.py         # Ride lifecycle management
+│   └── dashboard.py     # Main views
+└── templates/           # Jinja2 views
+```
+
+## Quickstart Guide
 
 ### 1. Prerequisites
 - Python 3.10+

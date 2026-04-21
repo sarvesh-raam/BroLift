@@ -1,16 +1,5 @@
 {% extends "base.html" %}
 {% block title %}Ride Details — BroLift{% endblock %}
-{% block extra_head %}
-<script>
-    function loadMapsScript() {
-        var s = document.createElement('script');
-        s.src = 'https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initDetailMap';
-        s.async = true; s.defer = true;
-        document.head.appendChild(s);
-    }
-    window.addEventListener('load', loadMapsScript);
-</script>
-{% endblock %}
 
 {% block content %}
 <div class="container" style="max-width: 600px;">
@@ -46,7 +35,7 @@
                 <div
                     style="display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; position: relative; z-index: 1;">
                     <span class="material-icons-outlined"
-                        style="font-size: 18px; color: var(--google-green); background: white;">location_on</span>
+                        style="font-size: 18px; color: var(--google-green); background: var(--bg);">location_on</span>
                     <div>
                         <div
                             style="font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.5px;">
@@ -59,7 +48,7 @@
 
                 <div style="display: flex; align-items: flex-start; gap: 16px; position: relative; z-index: 1;">
                     <span class="material-icons-outlined"
-                        style="font-size: 18px; color: var(--primary); background: white;">school</span>
+                        style="font-size: 18px; color: var(--primary); background: var(--bg);">school</span>
                     <div>
                         <div
                             style="font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.5px;">
@@ -75,11 +64,27 @@
                     <div style="font-size: 18px; font-weight: 500;">₹{{ ride.cost_per_person }}</div>
                     <div style="font-size: 11px; color: var(--text-secondary);">PER PERSON</div>
                 </div>
-                <div style="flex: 1; padding: 16px;">
+                <div style="flex: 1; padding: 16px; border-right: 1px solid var(--border);">
                     <div style="font-size: 18px; font-weight: 500;">{{ ride.seats_available }}</div>
                     <div style="font-size: 11px; color: var(--text-secondary);">SEATS LEFT</div>
                 </div>
+                <div style="flex: 1; padding: 16px;">
+                    <div style="font-size: 18px; font-weight: 500;">{{ ride.max_wait_time }}m</div>
+                    <div style="font-size: 11px; color: var(--text-secondary);">WAIT TIME</div>
+                </div>
             </div>
+
+            {% if (ride.total_fuel_cost or 0) > 0 or (ride.other_charges or 0) > 0 %}
+            <!-- Bill Breakdown -->
+            <div style="border-top: 1px solid var(--border); padding: 12px 24px; background: var(--surface);">
+                <div
+                    style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
+                    <span>Fuel: ₹{{ ride.total_fuel_cost | round }} + Tolls/Other: ₹{{ ride.other_charges | round
+                        }}</span>
+                    <span>Total: ₹{{ (ride.total_fuel_cost + ride.other_charges) | round }}</span>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -92,7 +97,9 @@
     <div style="margin-top: 32px;">
         {% if current_user.id == ride.host_id %}
         <!-- HOST VIEW: Manage Riders -->
-        <h3 style="font-size: 16px; margin-bottom: 16px;">Management</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 16px; margin: 0;">Management</h3>
+        </div>
 
         {% set pending = ride.requests | selectattr('status', 'equalto', 'pending') | list %}
         {% if pending %}
@@ -110,10 +117,10 @@
                 <div style="display: flex; gap: 8px;">
                     <a href="{{ url_for('rides.manage_request', ride_id=ride.id, request_id=req.id, action='confirm') }}"
                         class="btn-primary"
-                        style="flex: 1; text-align: center; background: var(--google-green); font-size: 13px; padding: 8px;">Accept</a>
+                        style="flex: 1; text-align: center; background: var(--google-green); font-size: 13px; padding: 8px; border-radius: var(--radius-md);">Accept</a>
                     <a href="{{ url_for('rides.manage_request', ride_id=ride.id, request_id=req.id, action='reject') }}"
                         class="nav-link"
-                        style="flex: 1; text-align: center; border: 1px solid var(--border); font-size: 13px; padding: 8px;">Decline</a>
+                        style="flex: 1; text-align: center; border: 1px solid var(--border); font-size: 13px; padding: 8px; border-radius: var(--radius-md);">Decline</a>
                 </div>
             </div>
             {% endfor %}
@@ -144,7 +151,7 @@
                     <span class="material-icons-outlined" style="font-size: 14px;">directions</span> Navigate
                 </a>
                 <span class="action-sub"
-                    style="color: var(--google-green); background: #e6f4ea; padding: 4px 10px; border-radius: 12px; font-size: 11px;">Confirmed</span>
+                    style="color: var(--google-green); background: var(--google-green-light); padding: 4px 10px; border-radius: 12px; font-size: 11px;">Confirmed</span>
             </div>
         </div>
         {% else %}
@@ -185,7 +192,7 @@
                 </div>
                 <div class="form-group">
                     <textarea name="message" rows="2" placeholder="Message to host (optional)"
-                        style="font-size: 14px;"></textarea>
+                        style="font-size: 14px; border: 1px solid var(--border); border-radius: var(--radius-md);"></textarea>
                 </div>
                 <button type="submit" class="btn-form-submit" style="border-radius: var(--radius-full);">Send Join
                     Request</button>
@@ -224,7 +231,7 @@
             <form method="POST" action="{{ url_for('rides.send_message', ride_id=ride.id) }}"
                 style="padding: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px;">
                 <input type="text" name="content" placeholder="Type a message..." required
-                    style="flex: 1; border-radius: var(--radius-full); padding: 8px 16px;">
+                    style="flex: 1; border-radius: var(--radius-full); padding: 8px 16px; border: 1px solid var(--border);">
                 <button type="submit" class="material-icons-outlined"
                     style="background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;">send</button>
             </form>
@@ -236,7 +243,8 @@
     <div style="margin-top: 32px; padding-bottom: 40px;">
         {% if current_user.id == ride.host_id and ride.status == 'confirmed' %}
         <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='completed') }}" class="btn-primary"
-            style="display: block; text-align: center; margin-bottom: 12px; background: var(--primary);">Mark as
+            style="display: block; text-align: center; margin-bottom: 12px; background: var(--primary); border-radius: var(--radius-md); padding: 12px;">Mark
+            as
             Completed</a>
         <a href="{{ url_for('rides.update_ride_status', ride_id=ride.id, status='cancelled') }}"
             style="display: block; text-align: center; color: var(--google-red);">Cancel Ride</a>
@@ -254,14 +262,32 @@
     var USER_PICKUP_LNG = {{ user_request.pickup_lng if user_request and user_request.pickup_lng else 'null' }};
     var waypoints = {{ waypoints_json| safe if waypoints_json else '[]' }};
 
+    const NIGHT_STYLE = [
+        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+        { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+        { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+        { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] },
+        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+    ];
+
     function initDetailMap() {
-        var map = new google.maps.Map(document.getElementById('detail-map'), {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const mapElement = document.getElementById('detail-map');
+        if (!mapElement) return;
+
+        var map = new google.maps.Map(mapElement, {
             center: { lat: (START_LAT + COLLEGE_LAT) / 2, lng: (START_LNG + COLLEGE_LNG) / 2 },
             zoom: 12,
             disableDefaultUI: true,
-            styles: [
-                { "featureType": "poi", "stylers": [{ "visibility": "off" }] }
-            ]
+            styles: isDark ? NIGHT_STYLE : []
+        });
+
+        // Theme listener
+        window.addEventListener('theme-changed', (e) => {
+            map.setOptions({ styles: e.detail.theme === 'dark' ? NIGHT_STYLE : [] });
         });
 
         var ds = new google.maps.DirectionsService();
@@ -279,24 +305,22 @@
             if (status === 'OK') dr.setDirections(res);
         });
 
-        // Always show Start (A) and Destination (B)
+        // Markers
         new google.maps.Marker({
             position: { lat: START_LAT, lng: START_LNG },
             map: map,
             label: { text: 'A', color: 'white' },
-            title: "Start Point"
+            title: "Start"
         });
-
         new google.maps.Marker({
             position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
             map: map,
             label: { text: 'B', color: 'white' },
-            title: "SRM IST Campus"
+            title: "SRM IST"
         });
 
-        // Plot all confirmed passenger waypoints for both host and guest
         var plottedCoords = [];
-        if (waypoints && waypoints.length > 0) {
+        if (Array.isArray(waypoints)) {
             waypoints.forEach(function (wp) {
                 plottedCoords.push(wp.lat + ',' + wp.lng);
                 new google.maps.Marker({
@@ -304,14 +328,12 @@
                     map: map,
                     label: { text: 'C', color: 'white' },
                     icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
-                    title: wp.name + "'s Pickup Point"
+                    title: wp.name + "'s Pickup"
                 });
             });
         }
 
         var pickupMarker = null;
-
-        // Plot existing pickup point if user has a request (and not already plotted as confirmed)
         if (USER_PICKUP_LAT && USER_PICKUP_LNG) {
             var coordKey = USER_PICKUP_LAT + ',' + USER_PICKUP_LNG;
             if (!plottedCoords.includes(coordKey)) {
@@ -319,56 +341,74 @@
                     position: { lat: USER_PICKUP_LAT, lng: USER_PICKUP_LNG },
                     map: map,
                     label: { text: 'C', color: 'white' },
-                    title: "Your Pickup Point"
+                    title: "Your Pickup"
                 });
             }
-
-            // Adjust bounds to include pickup point C
             var bounds = new google.maps.LatLngBounds();
             bounds.extend({ lat: START_LAT, lng: START_LNG });
             bounds.extend({ lat: COLLEGE_LAT, lng: COLLEGE_LNG });
             bounds.extend({ lat: USER_PICKUP_LAT, lng: USER_PICKUP_LNG });
             map.fitBounds(bounds);
         }
-    }
 
-    // Autocomplete for Join Request
-    var pickupInput = document.getElementById('pickup-input');
+        // Autocomplete
+        var pickupInput = document.getElementById('pickup-input');
+        if (pickupInput) {
+            var autocomplete = new google.maps.places.Autocomplete(pickupInput, {
+                componentRestrictions: { country: 'in' },
+                fields: ['geometry']
+            });
+            autocomplete.addListener('place_changed', function () {
+                var place = autocomplete.getPlace();
+                if (!place.geometry) return;
+                var lat = place.geometry.location.lat();
+                var lng = place.geometry.location.lng();
+                document.getElementById('pickup-lat').value = lat;
+                document.getElementById('pickup-lng').value = lng;
 
-    if (pickupInput) {
-        var autocomplete = new google.maps.places.Autocomplete(pickupInput, {
-            componentRestrictions: { country: 'in' },
-            fields: ['geometry', 'name', 'formatted_address']
-        });
+                updatePickupMarker(lat, lng);
+            });
 
-        autocomplete.addListener('place_changed', function () {
-            var place = autocomplete.getPlace();
-            if (!place.geometry) return;
+            // Prevent form submit if lat/lng missing (force geocode)
+            pickupInput.closest('form').addEventListener('submit', function (e) {
+                if (!document.getElementById('pickup-lat').value) {
+                    e.preventDefault();
+                    var geocoder = new google.maps.Geocoder();
+                    geocoder.geocode({ address: pickupInput.value }, function (results, status) {
+                        if (status === 'OK' && results[0]) {
+                            document.getElementById('pickup-lat').value = results[0].geometry.location.lat();
+                            document.getElementById('pickup-lng').value = results[0].geometry.location.lng();
+                            e.target.submit();
+                        } else {
+                            alert("Please select a location from the dropdown or enter a clearer landmark.");
+                        }
+                    });
+                }
+            });
+        }
 
-            var lat = place.geometry.location.lat();
-            var lng = place.geometry.location.lng();
-
-            document.getElementById('pickup-lat').value = lat;
-            document.getElementById('pickup-lng').value = lng;
-
-            // Add character 'C' marker
+        function updatePickupMarker(lat, lng) {
             if (pickupMarker) pickupMarker.setMap(null);
             pickupMarker = new google.maps.Marker({
                 position: { lat: lat, lng: lng },
                 map: map,
                 label: { text: 'C', color: 'white' },
-                animation: google.maps.Animation.DROP,
-                title: "Your Pickup Point"
+                animation: google.maps.Animation.DROP
             });
+            var b = new google.maps.LatLngBounds();
+            b.extend({ lat: START_LAT, lng: START_LNG });
+            b.extend({ lat: COLLEGE_LAT, lng: COLLEGE_LNG });
+            b.extend({ lat: lat, lng: lng });
+            map.fitBounds(b);
+        }
+    }
 
-            // Adjust map bounds to show Start, College and the new point C
-            var bounds = new google.maps.LatLngBounds();
-            bounds.extend({ lat: START_LAT, lng: START_LNG });
-            bounds.extend({ lat: COLLEGE_LAT, lng: COLLEGE_LNG });
-            bounds.extend({ lat: lat, lng: lng });
-            map.fitBounds(bounds);
-        });
+    function loadMapsScript() {
+        var s = document.createElement('script');
+        s.src = 'https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initDetailMap';
+        s.async = true; s.defer = true;
+        document.head.appendChild(s);
     }
-    }
+    window.addEventListener('load', loadMapsScript);
 </script>
 {% endblock %}

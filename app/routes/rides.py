@@ -67,6 +67,8 @@ def host_ride():
             departure_time=departure_time,
             available_seats=available_seats,
             total_fuel_cost=fuel_cost,
+            other_charges=request.form.get('other_charges', 0.0, type=float),
+            max_wait_time=request.form.get('max_wait_time', 5, type=int),
             distance_km=request.form.get('distance_km', 0.0, type=float),
             vehicle_type=current_user.vehicle_type or 'car',
             fuel_type=request.form.get('fuel_type', current_user.fuel_type or 'petrol'),
@@ -108,9 +110,16 @@ def find_ride():
             Ride.host_id != current_user.id
         )
 
-        # If user is NOT female, exclude female_only rides automatically
-        if not current_user.is_female:
+        # Filter based on passenger preference and user gender
+        if current_user.gender == 'female':
+            # Female users: Exclude male_only
+            query = query.filter(Ride.passenger_preference != 'male_only')
+        elif current_user.gender == 'male':
+            # Male users: Exclude female_only
             query = query.filter(Ride.passenger_preference != 'female_only')
+        else:
+            # Others: Only see 'any'
+            query = query.filter(Ride.passenger_preference == 'any')
 
         # Girls-only filter chip (female users can choose to only see girls-only rides)
         if girls_only and current_user.is_female:
