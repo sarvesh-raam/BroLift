@@ -13,6 +13,15 @@ This application provides a secure, verified environment for college students to
 ## Architecture and System Design
 The application implements a robust monolithic architecture with clean separation of concerns.
 
+```mermaid
+graph TD
+    A[Client Browser] -->|HTTP/HTTPS| B(Flask Web Server)
+    B -->|SQLAlchemy ORM| C[(SQLite / PostgreSQL)]
+    B -.->|Directions & Places| D[Google Maps API]
+    A -.->|JavaScript Init| D
+    B -->|Authentication| E(Flask-Login)
+```
+
 - **Frontend Interface**: HTML5, Vanilla CSS, and Vanilla JavaScript for responsive interactions.
 - **Backend Logic**: Python and Flask.
 - **Database Layer**: SQLite (development) / PostgreSQL (production) with SQLAlchemy ORM.
