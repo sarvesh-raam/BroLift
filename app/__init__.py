@@ -37,6 +37,11 @@ def create_app(config_class=Config):
 
     with app.app_context():
         db.create_all()
+        try:
+            from app.utils.migrations import migrate_database
+            migrate_database(app)
+        except Exception as e:
+            app.logger.error(f"Migration failed: {e}")
 
     # Log errors to help debug on Render
     if not app.debug:
