@@ -44,9 +44,12 @@ def create_app(config_class=Config):
 
     @app.errorhandler(500)
     def internal_error(error):
+        import traceback
         db.session.rollback()
-        app.logger.error(f'Server Error: {error}')
-        from flask import render_template
-        return render_template('500.html'), 500
+        tb = traceback.format_exc()
+        app.logger.error(f'Server Error: {error}\n{tb}')
+        # Show real error temporarily for debugging
+        return f"<pre>500 Error: {error}\n\n{tb}</pre>", 500
+
 
     return app
