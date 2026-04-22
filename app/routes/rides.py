@@ -173,7 +173,7 @@ def find_ride():
 @rides_bp.route('/ride/<int:ride_id>')
 @login_required
 def ride_detail(ride_id):
-    ride = Ride.query.get_or_404(ride_id)
+    ride = db.get_or_404(Ride, ride_id)
     user_request = RideRequest.query.filter_by(ride_id=ride_id, rider_id=current_user.id).first()
 
     # Get waypoints for confirmed passengers
@@ -198,7 +198,7 @@ def ride_detail(ride_id):
 @rides_bp.route('/ride/<int:ride_id>/chat', methods=['POST'])
 @login_required
 def send_message(ride_id):
-    ride = Ride.query.get_or_404(ride_id)
+    ride = db.get_or_404(Ride, ride_id)
     content = request.form.get('content', '').strip()
 
     # Safety check: sender must be host or a confirmed passenger
@@ -216,7 +216,7 @@ def send_message(ride_id):
 @rides_bp.route('/ride/<int:ride_id>/request', methods=['POST'])
 @login_required
 def request_ride(ride_id):
-    ride = Ride.query.get_or_404(ride_id)
+    ride = db.get_or_404(Ride, ride_id)
     if ride.host_id == current_user.id:
         flash('You cannot request your own ride.', 'danger')
         return redirect(url_for('rides.ride_detail', ride_id=ride_id))
@@ -250,12 +250,12 @@ def request_ride(ride_id):
 @rides_bp.route('/ride/<int:ride_id>/manage/<int:request_id>/<action>')
 @login_required
 def manage_request(ride_id, request_id, action):
-    ride = Ride.query.get_or_404(ride_id)
+    ride = db.get_or_404(Ride, ride_id)
     if ride.host_id != current_user.id:
         flash('Only the host can manage requests.', 'danger')
         return redirect(url_for('rides.ride_detail', ride_id=ride_id))
 
-    ride_req = RideRequest.query.get_or_404(request_id)
+    ride_req = db.get_or_404(RideRequest, request_id)
     if action == 'confirm':
         if ride.seats_available <= 0:
             flash('No more seats available.', 'danger')
@@ -272,7 +272,7 @@ def manage_request(ride_id, request_id, action):
 @rides_bp.route('/ride/<int:ride_id>/status/<status>')
 @login_required
 def update_ride_status(ride_id, status):
-    ride = Ride.query.get_or_404(ride_id)
+    ride = db.get_or_404(Ride, ride_id)
     if ride.host_id != current_user.id:
         flash('Only the host can update ride status.', 'danger')
         return redirect(url_for('rides.ride_detail', ride_id=ride_id))

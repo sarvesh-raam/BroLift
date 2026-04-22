@@ -1,7 +1,8 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from config import Config
+import logging
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -17,6 +18,12 @@ def create_app(config_class=Config):
                 template_folder=os.path.join(root, 'app', 'templates'))
     app.config.from_object(config_class)
 
+    # SQLAlchemy 2.0 engine options for Render PostgreSQL stability
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
+
     db.init_app(app)
     login_manager.init_app(app)
 
@@ -30,5 +37,16 @@ def create_app(config_class=Config):
 
     with app.app_context():
         db.create_all()
+
+    # Log errors to help debug on Render
+    if not app.debug:
+        logging.basicConfig(level=logging.INFO)
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback()
+        app.logger.error(f'Server Error: {error}')
+        from flask import render_template
+        return render_template('500.html'), 500
 
     return app
