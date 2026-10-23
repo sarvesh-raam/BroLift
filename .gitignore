@@ -41,7 +41,3 @@ desktop.ini
 
 # Tests
 .pytest_cache/
-
-# Local AI tooling
-.claude/
-CLAUDE.md
