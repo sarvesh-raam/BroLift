@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="{{ url_for('static', filename='js/maps.js') }}"></script>
+<style>
+    .bm-pin-wrap { background: none; border: none; }
+    .bm-pin {
+        width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+        border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .35);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .bm-pin span { transform: rotate(45deg); color: #fff; font: 600 12px/1 sans-serif; }
+    .bm-red { background: #ea4335; }
+    .bm-blue { background: #1a73e8; }
+    .bm-green { background: #34a853; }
+    .bm-orange { background: #ff9f43; }
+    .bm-suggest {
+        position: absolute; left: 0; right: 0; top: 100%; z-index: 1000; display: none;
+        background: var(--surface, #fff); border: 1px solid var(--border, #ddd);
+        border-radius: 8px; box-shadow: 0 6px 16px rgba(0, 0, 0, .15); overflow: hidden;
+    }
+    .bm-suggest-item {
+        padding: 10px 14px; font-size: 14px; cursor: pointer; color: var(--text-primary, #222);
+        border-bottom: 1px solid var(--border, #eee);
+    }
+    .bm-suggest-item:last-child { border-bottom: none; }
+    .bm-suggest-item:hover { background: var(--bg, #f5f5f5); }
+    .leaflet-container { font-family: inherit; z-index: 0; }
+    .bm-dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9); }
+</style>

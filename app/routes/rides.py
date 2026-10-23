@@ -16,7 +16,6 @@ WAIT_TIMES = (5, 10, 15, 20)
 def _map_context():
     from app.utils.fuel_prices import DEFAULTS
     return dict(fuel_defaults=dict(DEFAULTS, electric=Config.ELECTRIC_COST_PER_KM),
-                maps_key=Config.GOOGLE_MAPS_API_KEY,
                 college_lat=Config.COLLEGE_LOCATION['lat'],
                 college_lng=Config.COLLEGE_LOCATION['lng'],
                 college_name=Config.COLLEGE_NAME)

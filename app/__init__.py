@@ -30,8 +30,6 @@ def create_app(config_class=Config):
         logging.basicConfig(level=logging.INFO)
     if not (os.environ.get('SECRET_KEY') or os.environ.get('FLASK_SECRET_KEY')):
         app.logger.warning('SECRET_KEY is not set; using a random key. Sessions will not survive restarts.')
-    if not app.config['GOOGLE_MAPS_API_KEY']:
-        app.logger.warning('GOOGLE_MAPS_API_KEY is not set; maps and place search will not work.')
 
     db.init_app(app)
     csrf.init_app(app)

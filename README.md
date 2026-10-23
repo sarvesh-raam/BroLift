@@ -14,11 +14,11 @@ BroLift helps SRM IST (Kattankulathur) students share rides to and from campus. 
 
 ## Features
 - **Campus-only sign-up**: registration is restricted to `@srmist.edu.in` addresses.
-- **Host a ride**: pick a start point with Google Places, preview the route to campus, and choose seats, departure time, tolls and wait time.
+- **Host a ride**: search for a start point (or tap the map), preview the route to campus, and choose seats, departure time, tolls and wait time.
 - **Fair cost split**: fuel cost is estimated from route distance, vehicle mileage and live Chennai fuel prices, then split between the host and every offered seat.
 - **Find a ride**: filter by date and time (±1 hour), see rides on a map, and send a join request with your pickup point.
 - **Passenger preferences**: hosts can restrict a ride to girls only or boys only. The server enforces this.
-- **Ride management**: hosts accept or decline requests, open the full pickup route in Google Maps, and mark rides completed or cancelled.
+- **Ride management**: hosts accept or decline requests, open the full pickup route in Google Maps for navigation, and mark rides completed or cancelled.
 - **Ride chat**: the host and confirmed passengers can message each other.
 - **Light and dark themes**, with a mobile-first layout and bottom navigation.
 
@@ -28,7 +28,7 @@ BroLift helps SRM IST (Kattankulathur) students share rides to and from campus. 
 graph TD
     A[Browser: Jinja2 templates + JS] -->|HTML forms, CSRF protected| B(Flask app / Gunicorn)
     B -->|SQLAlchemy| C[(PostgreSQL on Render, SQLite locally)]
-    A -.->|Maps JS, Places, Directions| D[Google Maps Platform]
+    A -.->|Tiles, search, routing| D[OpenStreetMap services]
     B -.->|Scraped every 6h, cached| E[Chennai fuel prices]
 ```
 
@@ -49,7 +49,7 @@ All times are stored and compared in IST (`app/utils/time.py`), even though the 
 python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env            # then fill in GOOGLE_MAPS_API_KEY and SECRET_KEY
+cp .env.example .env            # then fill in SECRET_KEY
 python run.py                   # http://localhost:5000
 ```
 
@@ -77,11 +77,11 @@ The repo includes a `render.yaml` blueprint.
    | --- | --- |
    | `DATABASE_URL` | Your PostgreSQL connection string (`postgres://` URLs are accepted) |
    | `SECRET_KEY` | A long random string. Keep it fixed, or every deploy logs everyone out |
-   | `GOOGLE_MAPS_API_KEY` | A key with the Maps JavaScript, Places and Directions APIs enabled |
-
-4. In Google Cloud Console, **restrict the Maps key** to your Render domain (HTTP referrer restriction). The key is visible in page source.
 
 Tables are created automatically on first boot, and missing columns are added to older databases.
+
+## Maps
+Maps use free services that need no API key: [Leaflet](https://leafletjs.com) with OpenStreetMap/CARTO tiles, [Photon](https://photon.komoot.io) for place search, [Nominatim](https://nominatim.org) for addresses and [OSRM](https://routing.openstreetmap.de) for routes and distance. They are community-run, so keep usage light (no bulk or automated requests).
 
 ## License
 Distributed under the MIT License.

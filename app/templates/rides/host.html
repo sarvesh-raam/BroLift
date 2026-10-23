@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Host a Ride — BroLift{% endblock %}
 {% block extra_head %}
+{% include "rides/_map_assets.html" %}
 <!-- Modern Flatpickr base -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -503,22 +504,6 @@
     var COLLEGE_LAT = Number("{{ college_lat or 12.8231 }}");
     var COLLEGE_LNG = Number("{{ college_lng or 80.0444 }}");
 
-    const NIGHT_STYLE = [
-        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-        { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-        { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-        { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#263c3f" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-        { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
-        { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] },
-        { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] },
-        { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
-        { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] }
-    ];
-
     let selectedDatePart = '';
     let selectedTimePart = '';
 
@@ -581,59 +566,26 @@
     });
 
     var map;
-    var directionsRenderer;
+    var routeLine;
     var marker;
+    var autoTollSet = false; // only overwrite tolls we filled in ourselves
 
     function initHostMap() {
         const mapDiv = document.getElementById('host-map');
         if (!mapDiv) return;
 
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-
-        map = new google.maps.Map(mapDiv, {
-            center: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-            zoom: 14,
-            disableDefaultUI: true,
-            gestureHandling: 'greedy',
-            styles: isDark ? NIGHT_STYLE : []
-        });
-
-        window.addEventListener('theme-changed', (e) => {
-            map.setOptions({ styles: e.detail.theme === 'dark' ? NIGHT_STYLE : [] });
-        });
-
-        directionsRenderer = new google.maps.DirectionsRenderer({
-            map: map,
-            suppressMarkers: true,
-            polylineOptions: {
-                strokeColor: '#FF9F43',
-                strokeWeight: 7,
-                strokeOpacity: 0.95
-            }
-        });
-
-        new google.maps.Marker({
-            position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-            map: map,
-            icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-            title: 'SRM IST'
-        });
+        map = BroMap.create(mapDiv, { lat: COLLEGE_LAT, lng: COLLEGE_LNG }, 14);
+        BroMap.pin(map, COLLEGE_LAT, COLLEGE_LNG, { color: 'blue', title: 'SRM IST' });
 
         const startInput = document.getElementById('start_location');
         if (!startInput) return;
 
-        var ac = new google.maps.places.Autocomplete(startInput, { componentRestrictions: { country: 'in' } });
-        ac.addListener('place_changed', function () {
-            var place = ac.getPlace();
-            if (place.geometry) {
-                updateLocationAndDistance(place.geometry.location);
-            } else if (place.name) {
-                geocodeFromInput();
-            }
+        BroMap.autocomplete(startInput, { lat: COLLEGE_LAT, lng: COLLEGE_LNG }, function (place) {
+            updateLocationAndDistance(place.lat, place.lng);
         });
 
-        map.addListener('click', function (e) {
-            updateLocationAndDistance(e.latLng, true);
+        map.on('click', function (e) {
+            updateLocationAndDistance(e.latlng.lat, e.latlng.lng, true);
         });
 
         startInput.addEventListener('keypress', function (e) {
@@ -648,39 +600,34 @@
         const address = document.getElementById('start_location').value;
         if (!address) return;
 
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ address: address }, function (results, status) {
-            if (status === 'OK' && results[0]) {
-                updateLocationAndDistance(results[0].geometry.location);
-                map.setCenter(results[0].geometry.location);
+        BroMap.search(address, { lat: COLLEGE_LAT, lng: COLLEGE_LNG }).then(function (results) {
+            if (results[0]) {
+                updateLocationAndDistance(results[0].lat, results[0].lng);
+            } else {
+                const statusEl = document.getElementById('route-status');
+                document.getElementById('distance-info').style.display = 'flex';
+                if (statusEl) statusEl.textContent = 'Place not found. Try a nearby landmark or tap the map.';
             }
         });
     }
 
-    function updateLocationAndDistance(latLng, reverseGeocode = false) {
-        document.getElementById('start_lat').value = latLng.lat();
-        document.getElementById('start_lng').value = latLng.lng();
+    function updateLocationAndDistance(lat, lng, reverseGeocode = false) {
+        document.getElementById('start_lat').value = lat;
+        document.getElementById('start_lng').value = lng;
 
-        if (marker) marker.setMap(null);
-        marker = new google.maps.Marker({
-            position: latLng,
-            map: map,
-            icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
-        });
+        if (marker) map.removeLayer(marker);
+        marker = BroMap.pin(map, lat, lng, { color: 'green' });
 
-        calculateDistance(latLng);
+        calculateDistance(lat, lng);
 
         if (reverseGeocode) {
-            var geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ location: latLng }, function (results, status) {
-                if (status === 'OK' && results[0]) {
-                    document.getElementById('start_location').value = results[0].formatted_address;
-                }
+            BroMap.reverse(lat, lng).then(function (address) {
+                if (address) document.getElementById('start_location').value = address;
             });
         }
     }
 
-    function calculateDistance(origin) {
+    function calculateDistance(lat, lng) {
         const statusEl = document.getElementById('route-status');
         const infoEl = document.getElementById('distance-info');
         const costInd = document.getElementById('cost-indicator');
@@ -689,59 +636,43 @@
         if (statusEl) statusEl.textContent = 'Calculating...';
         if (costInd) costInd.style.display = 'block';
 
-        var ds = new google.maps.DirectionsService();
-        ds.route({
-            origin: origin,
-            destination: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-            travelMode: google.maps.TravelMode.DRIVING
-        }, function (res, status) {
-            if (status === 'OK') {
-                const leg = res.routes[0].legs[0];
-                const dist = leg.distance.value / 1000;
-                document.getElementById('distance_km').value = dist.toFixed(1);
+        BroMap.route([[lat, lng], [COLLEGE_LAT, COLLEGE_LNG]]).then(function (res) {
+            const dist = res.distanceKm;
+            document.getElementById('distance_km').value = dist.toFixed(1);
 
-                // Smart Toll Detection
-                let tollCount = 0;
-                leg.steps.forEach(step => {
-                    if (step.instructions.toLowerCase().includes('toll road')) {
-                        tollCount++;
-                    }
-                });
+            // Smart Toll Detection
+            const tollCount = res.tolls;
+            if (tollCount > 0) {
+                const unitPrice = (VEHICLE_TYPE === 'bike') ? 0 : 65;
+                const estimatedTolls = tollCount * unitPrice;
+                document.getElementById('other_charges').value = estimatedTolls;
+                autoTollSet = true;
 
-                // Check route-level warnings too
-                res.routes[0].warnings.forEach(warn => {
-                    if (warn.toLowerCase().includes('tolls')) tollCount = Math.max(tollCount, 1);
-                });
-
-                if (tollCount > 0) {
-                    const unitPrice = (VEHICLE_TYPE === 'bike') ? 0 : 65;
-                    const estimatedTolls = tollCount * unitPrice;
-                    document.getElementById('other_charges').value = estimatedTolls;
-
-                    let tollText = tollCount + ' Toll' + (tollCount > 1 ? 's' : '');
-                    if (VEHICLE_TYPE === 'bike') {
-                        tollText += ' (Free for Bikes)';
-                        if (statusEl) statusEl.innerHTML = dist.toFixed(1) + ' km to SRM <span style="color: var(--google-green); font-size: 11px; margin-left: 8px;"> Toll Free Path</span>';
-                    } else {
-                        tollText += ' (₹' + unitPrice + ' each)';
-                        if (statusEl) statusEl.innerHTML = dist.toFixed(1) + ' km to SRM <span style="color: var(--google-yellow); font-size: 11px; margin-left: 8px;"> ' + tollText + '</span>';
-                    }
-                    document.getElementById('toll-details').textContent = tollText;
+                let tollText = tollCount + ' Toll' + (tollCount > 1 ? 's' : '');
+                if (VEHICLE_TYPE === 'bike') {
+                    tollText += ' (Free for Bikes)';
+                    if (statusEl) statusEl.innerHTML = dist.toFixed(1) + ' km to SRM <span style="color: var(--google-green); font-size: 11px; margin-left: 8px;"> Toll Free Path</span>';
                 } else {
-                    document.getElementById('other_charges').value = 0;
-                    document.getElementById('toll-details').textContent = '';
-                    if (statusEl) statusEl.textContent = dist.toFixed(1) + ' km to SRM';
+                    tollText += ' (₹' + unitPrice + ' each)';
+                    if (statusEl) statusEl.innerHTML = dist.toFixed(1) + ' km to SRM <span style="color: var(--google-yellow); font-size: 11px; margin-left: 8px;"> ' + tollText + '</span>';
                 }
-
-                directionsRenderer.setDirections(res);
-                if (costInd) costInd.style.display = 'none';
-                updateCost();
+                document.getElementById('toll-details').textContent = tollText;
             } else {
-                console.error('Directions request failed:', status);
-                if (statusEl) statusEl.textContent = 'No route found';
-                if (costInd) costInd.style.display = 'none';
-                updateCost(); // Reset to 0
+                // The free router rarely knows toll plazas, so keep any amount the host typed
+                if (autoTollSet) document.getElementById('other_charges').value = 0;
+                autoTollSet = false;
+                document.getElementById('toll-details').textContent = '';
+                if (statusEl) statusEl.textContent = dist.toFixed(1) + ' km to SRM';
             }
+
+            routeLine = BroMap.drawRoute(map, res.coords, '#FF9F43', routeLine);
+            if (costInd) costInd.style.display = 'none';
+            updateCost();
+        }).catch(function (err) {
+            console.error('Route request failed:', err);
+            if (statusEl) statusEl.textContent = 'No route found';
+            if (costInd) costInd.style.display = 'none';
+            updateCost(); // Reset to 0
         });
     }
 
@@ -786,12 +717,6 @@
 
     function updateFuelUI(el) { updateCost(); }
 
-    function loadMapsScript() {
-        var s = document.createElement('script');
-        s.src = 'https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initHostMap';
-        s.async = true; s.defer = true;
-        document.head.appendChild(s);
-    }
-    window.addEventListener('load', loadMapsScript);
+    document.addEventListener('DOMContentLoaded', initHostMap);
 </script>
 {% endblock %}

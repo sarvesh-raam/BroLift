@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Ride Details — BroLift{% endblock %}
 
+{% block extra_head %}
+{% include "rides/_map_assets.html" %}
+{% endblock %}
+
 {% block content %}
 <div class="container" style="max-width: 600px;">
 
@@ -291,74 +295,27 @@
     var USER_PICKUP_LNG = {{ user_request.pickup_lng if user_request and user_request.pickup_lng else 'null' }};
     var waypoints = {{ waypoints | tojson }};
 
-    const NIGHT_STYLE = [
-        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-        { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-        { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-        { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-    ];
-
     function initDetailMap() {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const mapElement = document.getElementById('detail-map');
         if (!mapElement) return;
 
-        var map = new google.maps.Map(mapElement, {
-            center: { lat: (START_LAT + COLLEGE_LAT) / 2, lng: (START_LNG + COLLEGE_LNG) / 2 },
-            zoom: 12,
-            disableDefaultUI: true,
-            styles: isDark ? NIGHT_STYLE : []
-        });
+        var map = BroMap.create(mapElement, { lat: (START_LAT + COLLEGE_LAT) / 2, lng: (START_LNG + COLLEGE_LNG) / 2 }, 12);
+        var routeLine = null;
+        var basePoints = [[START_LAT, START_LNG], [COLLEGE_LAT, COLLEGE_LNG]];
 
-        // Theme listener
-        window.addEventListener('theme-changed', (e) => {
-            map.setOptions({ styles: e.detail.theme === 'dark' ? NIGHT_STYLE : [] });
-        });
-
-        var ds = new google.maps.DirectionsService();
-        var dr = new google.maps.DirectionsRenderer({
-            map: map,
-            suppressMarkers: true,
-            polylineOptions: { strokeColor: '#1a73e8', strokeWeight: 5, strokeOpacity: 0.8 }
-        });
-
-        ds.route({
-            origin: { lat: START_LAT, lng: START_LNG },
-            destination: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-            travelMode: google.maps.TravelMode.DRIVING
-        }, function (res, status) {
-            if (status === 'OK') dr.setDirections(res);
-        });
+        BroMap.route(basePoints).then(function (res) {
+            routeLine = BroMap.drawRoute(map, res.coords, '#1a73e8', routeLine);
+        }).catch(function () { BroMap.fit(map, basePoints); });
 
         // Markers
-        new google.maps.Marker({
-            position: { lat: START_LAT, lng: START_LNG },
-            map: map,
-            label: { text: 'A', color: 'white' },
-            title: "Start"
-        });
-        new google.maps.Marker({
-            position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-            map: map,
-            label: { text: 'B', color: 'white' },
-            title: "SRM IST"
-        });
+        BroMap.pin(map, START_LAT, START_LNG, { color: 'red', label: 'A', title: 'Start' });
+        BroMap.pin(map, COLLEGE_LAT, COLLEGE_LNG, { color: 'red', label: 'B', title: 'SRM IST' });
 
         var plottedCoords = [];
         if (Array.isArray(waypoints)) {
             waypoints.forEach(function (wp) {
                 plottedCoords.push(wp.lat + ',' + wp.lng);
-                new google.maps.Marker({
-                    position: { lat: wp.lat, lng: wp.lng },
-                    map: map,
-                    label: { text: 'C', color: 'white' },
-                    icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
-                    title: wp.name + "'s Pickup"
-                });
+                BroMap.pin(map, wp.lat, wp.lng, { color: 'green', label: 'C', title: wp.name + "'s Pickup" });
             });
         }
 
@@ -366,78 +323,52 @@
         if (USER_PICKUP_LAT && USER_PICKUP_LNG) {
             var coordKey = USER_PICKUP_LAT + ',' + USER_PICKUP_LNG;
             if (!plottedCoords.includes(coordKey)) {
-                pickupMarker = new google.maps.Marker({
-                    position: { lat: USER_PICKUP_LAT, lng: USER_PICKUP_LNG },
-                    map: map,
-                    label: { text: 'C', color: 'white' },
-                    title: "Your Pickup"
-                });
+                pickupMarker = BroMap.pin(map, USER_PICKUP_LAT, USER_PICKUP_LNG, { color: 'red', label: 'C', title: 'Your Pickup' });
             }
-            var bounds = new google.maps.LatLngBounds();
-            bounds.extend({ lat: START_LAT, lng: START_LNG });
-            bounds.extend({ lat: COLLEGE_LAT, lng: COLLEGE_LNG });
-            bounds.extend({ lat: USER_PICKUP_LAT, lng: USER_PICKUP_LNG });
-            map.fitBounds(bounds);
+            BroMap.fit(map, basePoints.concat([[USER_PICKUP_LAT, USER_PICKUP_LNG]]));
         }
 
         // Autocomplete
         var pickupInput = document.getElementById('pickup-input');
         if (pickupInput) {
-            var autocomplete = new google.maps.places.Autocomplete(pickupInput, {
-                componentRestrictions: { country: 'in' },
-                fields: ['geometry']
+            BroMap.autocomplete(pickupInput, { lat: START_LAT, lng: START_LNG }, function (place) {
+                document.getElementById('pickup-lat').value = place.lat;
+                document.getElementById('pickup-lng').value = place.lng;
+                updatePickupMarker(place.lat, place.lng);
             });
-            autocomplete.addListener('place_changed', function () {
-                var place = autocomplete.getPlace();
-                if (!place.geometry) return;
-                var lat = place.geometry.location.lat();
-                var lng = place.geometry.location.lng();
-                document.getElementById('pickup-lat').value = lat;
-                document.getElementById('pickup-lng').value = lng;
 
-                updatePickupMarker(lat, lng);
+            // Typing again invalidates the chosen point
+            pickupInput.addEventListener('input', function () {
+                document.getElementById('pickup-lat').value = '';
+                document.getElementById('pickup-lng').value = '';
             });
 
             // Prevent form submit if lat/lng missing (force geocode)
             pickupInput.closest('form').addEventListener('submit', function (e) {
                 if (!document.getElementById('pickup-lat').value) {
                     e.preventDefault();
-                    var geocoder = new google.maps.Geocoder();
-                    geocoder.geocode({ address: pickupInput.value }, function (results, status) {
-                        if (status === 'OK' && results[0]) {
-                            document.getElementById('pickup-lat').value = results[0].geometry.location.lat();
-                            document.getElementById('pickup-lng').value = results[0].geometry.location.lng();
-                            e.target.submit();
+                    var form = e.target;
+                    BroMap.search(pickupInput.value, { lat: START_LAT, lng: START_LNG }).then(function (results) {
+                        if (results[0]) {
+                            document.getElementById('pickup-lat').value = results[0].lat;
+                            document.getElementById('pickup-lng').value = results[0].lng;
+                            form.submit();
                         } else {
                             alert("Please select a location from the dropdown or enter a clearer landmark.");
                         }
+                    }).catch(function () {
+                        alert("Location search is unavailable right now. Please try again.");
                     });
                 }
             });
         }
 
         function updatePickupMarker(lat, lng) {
-            if (pickupMarker) pickupMarker.setMap(null);
-            pickupMarker = new google.maps.Marker({
-                position: { lat: lat, lng: lng },
-                map: map,
-                label: { text: 'C', color: 'white' },
-                animation: google.maps.Animation.DROP
-            });
-            var b = new google.maps.LatLngBounds();
-            b.extend({ lat: START_LAT, lng: START_LNG });
-            b.extend({ lat: COLLEGE_LAT, lng: COLLEGE_LNG });
-            b.extend({ lat: lat, lng: lng });
-            map.fitBounds(b);
+            if (pickupMarker) map.removeLayer(pickupMarker);
+            pickupMarker = BroMap.pin(map, lat, lng, { color: 'red', label: 'C', title: 'Your Pickup' });
+            BroMap.fit(map, basePoints.concat([[lat, lng]]));
         }
     }
-
-    function loadMapsScript() {
-        var s = document.createElement('script');
-        s.src = 'https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initDetailMap';
-        s.async = true; s.defer = true;
-        document.head.appendChild(s);
-    }
-    window.addEventListener('load', loadMapsScript);
+    document.addEventListener('DOMContentLoaded', initDetailMap);
 </script>
 {% endblock %}

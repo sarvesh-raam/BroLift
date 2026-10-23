@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Find a Ride — BroLift{% endblock %}
+{% block extra_head %}
+{% include "rides/_map_assets.html" %}
+{% endblock %}
 {% block content %}
 <div class="container">
     <div style="margin-bottom: 32px;">
@@ -111,65 +114,27 @@
     var COLLEGE_LAT = Number("{{ college_lat or 12.8231 }}");
     var COLLEGE_LNG = Number("{{ college_lng or 80.0444 }}");
 
-    const NIGHT_STYLE = [
-        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-        { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-        { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-        { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-    ];
-
     function initFindMap() {
         const mapDiv = document.getElementById('find-map');
         if (!mapDiv) return;
 
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-
-        var map = new google.maps.Map(mapDiv, {
-            center: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-            zoom: 11,
-            disableDefaultUI: true,
-            styles: isDark ? NIGHT_STYLE : []
-        });
-
-        // Listen for theme changes
-        window.addEventListener('theme-changed', (e) => {
-            map.setOptions({ styles: e.detail.theme === 'dark' ? NIGHT_STYLE : [] });
-        });
+        var map = BroMap.create(mapDiv, { lat: COLLEGE_LAT, lng: COLLEGE_LNG }, 11);
 
         // College Marker
-        new google.maps.Marker({
-            position: { lat: COLLEGE_LAT, lng: COLLEGE_LNG },
-            map: map,
-            icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-            title: 'SRM IST'
-        });
+        BroMap.pin(map, COLLEGE_LAT, COLLEGE_LNG, { color: 'blue', title: 'SRM IST' });
 
         // Ride Markers
+        var points = [[COLLEGE_LAT, COLLEGE_LNG]];
         if (Array.isArray(ridesData)) {
             ridesData.forEach(function (r) {
-                var marker = new google.maps.Marker({
-                    position: { lat: r.lat, lng: r.lng },
-                    map: map,
-                    label: { text: '₹', color: 'white' },
-                    title: r.label
-                });
-                marker.addListener('click', function () {
-                    window.location.href = '/ride/' + r.id;
-                });
+                if (!r.lat || !r.lng) return;
+                points.push([r.lat, r.lng]);
+                BroMap.pin(map, r.lat, r.lng, { color: 'red', label: '₹', title: r.label })
+                    .on('click', function () { window.location.href = '/ride/' + r.id; });
             });
         }
+        BroMap.fit(map, points);
     }
-
-    function loadMapsScript() {
-        var s = document.createElement('script');
-        s.src = 'https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&libraries=places&callback=initFindMap';
-        s.async = true; s.defer = true;
-        document.head.appendChild(s);
-    }
-    window.addEventListener('load', loadMapsScript);
+    document.addEventListener('DOMContentLoaded', initFindMap);
 </script>
 {% endblock %}

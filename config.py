@@ -28,8 +28,6 @@ class Config:
         # Fail fast instead of hanging the worker if the database is unreachable
         SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'connect_timeout': 10}
 
-    GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY') or ''
-
     # Secure session cookies when served over HTTPS (Render sets RENDER=true)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
