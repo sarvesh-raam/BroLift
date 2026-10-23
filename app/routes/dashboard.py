@@ -1,51 +1,43 @@
 from flask import Blueprint, render_template, redirect, url_for
 from flask_login import login_required, current_user
-from datetime import datetime, timedelta
 from app.models import Ride, RideRequest
+from app.utils.time import now_local
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
+
 @dashboard_bp.route('/')
 def landing():
-    from flask_login import current_user
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.index'))
     return render_template('landing.html')
 
+
 @dashboard_bp.route('/dashboard')
 @login_required
 def index():
-    import traceback
-    from flask import current_app
-    try:
-        hosted_rides = Ride.query.filter_by(host_id=current_user.id)\
-            .order_by(Ride.departure_time.desc()).limit(5).all()
+    now = now_local()
+    hosted_rides = Ride.query.filter_by(host_id=current_user.id)\
+        .order_by(Ride.departure_time.desc()).limit(5).all()
 
-        my_requests = RideRequest.query.filter_by(rider_id=current_user.id)\
-            .order_by(RideRequest.created_at.desc()).limit(5).all()
+    my_requests = RideRequest.query.filter_by(rider_id=current_user.id)\
+        .order_by(RideRequest.created_at.desc()).limit(5).all()
 
-        upcoming = []
-        for ride in hosted_rides:
-            if ride.departure_time and ride.departure_time >= datetime.now() and ride.status != 'cancelled':
-                upcoming.append({'type': 'host', 'ride': ride})
-        for req in my_requests:
-            if req.status == 'confirmed' and req.ride and req.ride.departure_time and req.ride.departure_time >= datetime.now():
-                upcoming.append({'type': 'passenger', 'ride': req.ride, 'request': req})
+    upcoming_hosted = Ride.query.filter(
+        Ride.host_id == current_user.id,
+        Ride.status == 'confirmed',
+        Ride.departure_time >= now,
+    ).order_by(Ride.departure_time.asc()).all()
 
-        upcoming.sort(key=lambda x: x['ride'].departure_time)
+    upcoming_joined = RideRequest.query.join(Ride).filter(
+        RideRequest.rider_id == current_user.id,
+        RideRequest.status == 'confirmed',
+        Ride.status == 'confirmed',
+        Ride.departure_time >= now,
+    ).order_by(Ride.departure_time.asc()).all()
 
-        stats = {
-            'rides_hosted': len(hosted_rides),
-            'rides_joined': len([r for r in my_requests if r.status == 'confirmed']),
-            'pending_requests': 0,
-        }
-
-        return render_template('dashboard/index.html', hosted_rides=hosted_rides,
-                               my_requests=my_requests, upcoming=upcoming, stats=stats,
-                               now=datetime.now())
-    except Exception as e:
-        tb = traceback.format_exc()
-        current_app.logger.error(f'Dashboard error: {e}\n{tb}')
-        # Temporarily return the raw error so we can diagnose
-        from flask import abort
-        raise e
+    return render_template('dashboard/index.html', hosted_rides=hosted_rides,
+                           my_requests=my_requests,
+                           upcoming_hosted=upcoming_hosted,
+                           upcoming_joined=upcoming_joined,
+                           now=now)

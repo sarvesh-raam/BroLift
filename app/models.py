@@ -1,5 +1,5 @@
-from datetime import datetime
 from app import db, login_manager
+from app.utils.time import now_local
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -22,7 +22,7 @@ class User(UserMixin, db.Model):
     vehicle_mileage  = db.Column(db.Float, default=15.0)        # km per litre/kg
     fuel_type      = db.Column(db.String(10), default='petrol') # petrol/diesel/cng/electric
     gender         = db.Column(db.String(10), default='other')  # male/female/other
-    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at     = db.Column(db.DateTime, default=now_local)
 
     hosted_rides   = db.relationship('Ride', backref='host', lazy=True, foreign_keys='Ride.host_id')
     ride_requests  = db.relationship('RideRequest', backref='rider', lazy=True)
@@ -30,6 +30,13 @@ class User(UserMixin, db.Model):
     @property
     def is_female(self):
         return self.gender == 'female'
+
+    @property
+    def max_passengers(self):
+        """Seats a host can offer: 1 on a bike, otherwise seater capacity minus the driver."""
+        if self.vehicle_type == 'bike':
+            return 1
+        return max(1, (self.vehicle_capacity or 5) - 1)
 
     # backward-compat
     @property
@@ -65,10 +72,11 @@ class Ride(db.Model):
     other_charges   = db.Column(db.Float, default=0.0)    # tolls, parking etc.
     max_wait_time   = db.Column(db.Integer, default=5)    # minutes
     notes           = db.Column(db.Text)
-    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at      = db.Column(db.DateTime, default=now_local)
 
     requests = db.relationship('RideRequest', backref='ride', lazy=True, cascade='all, delete-orphan')
-    messages = db.relationship('Message', backref='ride', lazy=True, cascade='all, delete-orphan')
+    messages = db.relationship('Message', backref='ride', lazy=True, cascade='all, delete-orphan',
+                               order_by='Message.id')
 
     @property
     def confirmed_passengers(self):
@@ -105,7 +113,7 @@ class RideRequest(db.Model):
     pickup_lng      = db.Column(db.Float)
     status          = db.Column(db.String(20), default='pending')
     message         = db.Column(db.Text)
-    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at      = db.Column(db.DateTime, default=now_local)
 
     def __repr__(self): return f'<RideRequest {self.id}>'
 
@@ -116,7 +124,7 @@ class Message(db.Model):
     ride_id    = db.Column(db.Integer, db.ForeignKey('rides.id'), nullable=False)
     sender_id  = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     content    = db.Column(db.Text, nullable=False)
-    timestamp  = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp  = db.Column(db.DateTime, default=now_local)  # shown to users, so keep it in IST
 
     sender = db.relationship('User', foreign_keys=[sender_id])
 

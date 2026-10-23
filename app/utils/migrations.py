@@ -1,34 +1,66 @@
-import logging
-from sqlalchemy import text
+"""
+Lightweight schema sync for databases created from older versions of the models.
+
+db.create_all() only creates missing tables; it never adds columns to existing ones.
+This compares every model table with the live database and adds any missing columns.
+Works on both PostgreSQL and SQLite. Each ALTER runs in its own transaction so one
+failure cannot leave the rest of the migration stuck in an aborted transaction.
+"""
+from flask import current_app
+from sqlalchemy import inspect, text
+
 from app import db
 
-def migrate_database(app):
-    """
-    Manually add missing columns to the database.
-    This is a temporary measure because db.create_all() does not handle schema changes.
-    """
-    with app.app_context():
-        try:
-            with db.engine.connect() as conn:
-                columns_to_add = [
-                    ('total_fuel_cost', 'FLOAT DEFAULT 0.0'),
-                    ('distance_km', 'FLOAT DEFAULT 0.0'),
-                    ('passenger_preference', 'VARCHAR(20) DEFAULT \'any\''),
-                    ('other_charges', 'FLOAT DEFAULT 0.0'),
-                    ('max_wait_time', 'INTEGER DEFAULT 5'),
-                ]
 
-                for col_name, col_type in columns_to_add:
-                    # Check if column exists
-                    result = conn.execute(text(
-                        "SELECT column_name FROM information_schema.columns "
-                        f"WHERE table_name='rides' AND column_name='{col_name}';"
+def _default_sql(column):
+    default = column.default
+    if default is None or not default.is_scalar:
+        return ''
+    value = default.arg
+    if isinstance(value, bool):
+        return ' DEFAULT ' + ('TRUE' if value else 'FALSE')
+    if isinstance(value, (int, float)):
+        return f' DEFAULT {value}'
+    if isinstance(value, str):
+        return " DEFAULT '" + value.replace("'", "''") + "'"
+    return ''
+
+
+def migrate_database():
+    engine = db.engine
+    preparer = engine.dialect.identifier_preparer
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+
+    for table in db.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue
+        existing_cols = {c['name'] for c in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in existing_cols:
+                continue
+            col_type = column.type.compile(dialect=engine.dialect)
+            ddl = (f'ALTER TABLE {preparer.quote(table.name)} '
+                   f'ADD COLUMN {preparer.quote(column.name)} {col_type}{_default_sql(column)}')
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text(ddl))
+                current_app.logger.info(f'Migration: added {table.name}.{column.name}')
+            except Exception as e:
+                current_app.logger.error(f'Migration failed for {table.name}.{column.name}: {e}')
+
+    # Data backfill: databases from the first release stored car info in has_car/car_model/car_number
+    if 'users' in existing_tables:
+        user_cols = {c['name'] for c in inspect(engine).get_columns('users')}
+        if {'has_car', 'car_model', 'car_number'} <= user_cols:
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        'UPDATE users SET has_vehicle = has_car, '
+                        'vehicle_model = COALESCE(vehicle_model, car_model), '
+                        'vehicle_number = COALESCE(vehicle_number, car_number) '
+                        'WHERE has_car IS NOT NULL AND (has_vehicle IS NULL OR has_vehicle = FALSE) '
+                        'AND has_car = TRUE'
                     ))
-                    if not result.fetchone():
-                        app.logger.info(f"Adding '{col_name}' column to 'rides' table...")
-                        conn.execute(text(f"ALTER TABLE rides ADD COLUMN {col_name} {col_type};"))
-                        conn.commit()
-                        app.logger.info(f"Column '{col_name}' added successfully.")
-
-        except Exception as e:
-            app.logger.error(f"Migration error: {e}")
+            except Exception as e:
+                current_app.logger.error(f'Migration backfill of legacy car fields failed: {e}')

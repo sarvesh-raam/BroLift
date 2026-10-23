@@ -215,6 +215,7 @@
     {% endif %}
 
     <form method="POST" id="host-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="font-size: 16px; margin: 0; color: var(--primary);">Route & Time</h3>
@@ -265,8 +266,7 @@
             <div class="form-group" style="padding-top: 4px;">
                 <label>Seats Available</label>
                 <div style="display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
-                    {% set vcap = current_user.vehicle_capacity or 5 %}
-                    {% for i in range(1, vcap) %}
+                    {% for i in range(1, current_user.max_passengers + 1) %}
                     <label style="cursor: pointer;">
                         <input type="radio" name="available_seats" value="{{ i }}" style="display: none;" {% if
                             (form_data.get('available_seats')|int==i) or (not form_data.get('available_seats') and i==1)
@@ -355,6 +355,7 @@
                             style="text-align: center; border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-md); font-size: 13px;">
                             Everyone</div>
                     </label>
+                    {% if current_user.gender in ('female', 'male') %}
                     <label style="flex: 1; cursor: pointer;">
                         {% if current_user.gender == 'female' %}
                         <input type="radio" name="passenger_preference" value="female_only" style="display: none;"
@@ -370,6 +371,7 @@
                             Boys Only</div>
                         {% endif %}
                     </label>
+                    {% endif %}
                 </div>
             </div>
 
@@ -487,7 +489,17 @@
 <script>
     var VEHICLE_TYPE = "{{ current_user.vehicle_type or 'car' }}";
     var MILEAGE = Number("{{ current_user.vehicle_mileage or 15 }}");
-    var FUEL_PRICES = { petrol: 102, diesel: 92, cng: 82, electric: 1.5 };
+    var FUEL_PRICES = {{ fuel_defaults | tojson }};
+    // Refresh with live Chennai prices without blocking the page
+    fetch('{{ url_for('rides.fuel_prices_api') }}')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (p) {
+            if (!p) return;
+            ['petrol', 'diesel', 'cng'].forEach(function (k) { if (p[k]) FUEL_PRICES[k] = p[k]; });
+            if (p.electric_per_km) FUEL_PRICES.electric = p.electric_per_km;
+            updateCost();
+        })
+        .catch(function () { });
     var COLLEGE_LAT = Number("{{ college_lat or 12.8231 }}");
     var COLLEGE_LNG = Number("{{ college_lng or 80.0444 }}");
 
@@ -746,13 +758,11 @@
         const ftEl = document.querySelector('input[name="fuel_type"]:checked');
         const ft = ftEl ? ftEl.value : 'petrol';
 
-        console.log('Calculating cost:', { dist, mileage, ft });
-
         let fuelCost = 0;
         if (ft === 'electric') {
-            fuelCost = dist * 2;
+            fuelCost = dist * FUEL_PRICES.electric;
         } else {
-            fuelCost = (dist / mileage) * (FUEL_PRICES[ft] || 102);
+            fuelCost = (dist / mileage) * (FUEL_PRICES[ft] || FUEL_PRICES.petrol);
         }
 
         const fuel = Math.ceil(fuelCost);

@@ -11,6 +11,7 @@
         </div>
 
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <input type="email" id="email" name="email" placeholder="Email (st6546@srmist.edu.in)" required
                     autofocus>

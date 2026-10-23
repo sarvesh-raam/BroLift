@@ -32,8 +32,8 @@
     </div>
 
     <!-- Active/Upcoming Ride Banner (Enhanced) -->
-    {% set active = hosted_rides | selectattr('status','equalto','confirmed') | list %}
-    {% set my_rides = my_requests | selectattr('status','equalto','confirmed') | list %}
+    {% set active = upcoming_hosted %}
+    {% set my_rides = upcoming_joined %}
 
     {% if active or my_rides %}
     <h2 class="section-title" style="font-size: 18px; margin-bottom: 12px;">Active Rides</h2>
@@ -44,7 +44,7 @@
             <span class="material-icons-outlined" style="color: var(--primary);">electric_car</span>
             <div>
                 <div class="action-title" style="margin: 0;">You're Hosting</div>
-                <div class="action-sub">{{ ride.departure_time.strftime('%I:%M %p') }} · {{ ride.seats_available }}
+                <div class="action-sub">{{ ride.departure_time.strftime('%d %b, %I:%M %p') }} · {{ ride.seats_available }}
                     seats left</div>
             </div>
         </div>
@@ -58,7 +58,7 @@
             <span class="material-icons-outlined" style="color: var(--google-green);">check_circle</span>
             <div>
                 <div class="action-title" style="margin: 0;">Ride Confirmed</div>
-                <div class="action-sub">{{ req.ride.departure_time.strftime('%I:%M %p') }} · {{ req.ride.host.name }}
+                <div class="action-sub">{{ req.ride.departure_time.strftime('%d %b, %I:%M %p') }} · {{ req.ride.host.name }}
                 </div>
             </div>
         </div>

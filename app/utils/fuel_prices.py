@@ -8,6 +8,9 @@ import logging
 import threading
 from datetime import datetime, timedelta
 
+from config import Config
+from app.utils.time import now_local
+
 logger = logging.getLogger(__name__)
 
 # Default fallback prices (Chennai, Mar 2026)
@@ -41,6 +44,7 @@ def _scrape_price(url: str, label: str) -> float | None:
             )
         }
         r = requests.get(url, headers=headers, timeout=8)
+        r.raise_for_status()
         soup = BeautifulSoup(r.text, 'html.parser')
 
         # goodreturns shows price in <div class="price-val"> or table cells
@@ -89,7 +93,7 @@ def _do_fetch():
             _meta['source'] = 'goodreturns.in (live)'
         else:
             _meta['source'] = 'fallback (scrape failed)'
-        _meta['last_updated'] = datetime.now().strftime('%d %b %Y %I:%M %p')
+        _meta['last_updated'] = now_local().strftime('%d %b %Y %I:%M %p IST')
         _last_fetch_time = datetime.now()
 
     logger.info(f"Fuel prices refreshed: {_cache}  source={_meta['source']}")
@@ -114,6 +118,6 @@ def get_fuel_prices() -> dict:
             'petrol': _cache.get('petrol', DEFAULTS['petrol']),
             'diesel': _cache.get('diesel', DEFAULTS['diesel']),
             'cng':    _cache.get('cng',    DEFAULTS['cng']),
-            'electric_per_km': 1.50,
+            'electric_per_km': Config.ELECTRIC_COST_PER_KM,
             'meta': dict(_meta)
         }

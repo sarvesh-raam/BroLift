@@ -18,6 +18,7 @@
     </div>
 
     <form method="POST" id="find-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="date" id="search_date" name="search_date" value="{{ search_data.get('search_date', '') }}"
             min="{{ today }}" onchange="this.form.submit()" style="display: none;">
 
@@ -100,7 +101,7 @@
 </div>
 
 <script>
-    var ridesData = {{ (rides_json or '[]')| safe }};
+    var ridesData = {{ rides_data | tojson }};
 
     function setDate(d) {
         document.getElementById('search_date').value = d;
